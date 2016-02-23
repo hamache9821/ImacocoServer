@@ -11,7 +11,7 @@
     "passport": "*",
     "passport-http": "*",
     "cookie-parser": "*",
-    "connect-flash": "*",
+    "date-utils": "*",
     "mongoose": "*"
   }
 }
