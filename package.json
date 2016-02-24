@@ -8,10 +8,13 @@
   "dependencies": {
     "express": "*",
     "express-session": "*",
+    "express-domain-middleware": "*",
     "passport": "*",
     "passport-http": "*",
     "cookie-parser": "*",
     "date-utils": "*",
+    "co": "*",
+    "async": "*",
     "mongoose": "*"
   }
 }
