@@ -13,8 +13,6 @@
     "passport-http": "*",
     "cookie-parser": "*",
     "date-utils": "*",
-    "co": "*",
-    "async": "*",
     "mongoose": "*"
   }
 }

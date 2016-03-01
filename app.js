@@ -31,23 +31,18 @@ var reset   = '\u001b[0m';
 //モジュール宣言
 require('date-utils');
 var http = require('http');
-var co  = require('co');
-var async = require('async');
 var express = require('express');
 var domain = require('express-domain-middleware');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
-var mongoose = require("mongoose");
+var mongoose = require('mongoose');
 var crypto = require("crypto");
-var passport = require('passport')
+var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
 
 
 //デバッグ用
-var fs = require('fs');
 var utill = require('util');
- _TEST ={};
-
 
 //Express関係
 var app = express();
@@ -56,9 +51,10 @@ app.use(function(err, req, res, next) {logger.error.fatal(err);}); //例外ハ�
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(passport.initialize());
 app.use(passport.session());
-
 app.set('port', port);
 
+
+//todo このへんのはそのうちモジュール化したい
 //パスワードをハッシュ化するやつ
 var getHash = function(target)
     {var sha = crypto.createHmac('sha256', hashSecretKey);
@@ -94,6 +90,7 @@ var cInfo = function(req, msg)
         return;
     };
 
+//時間計算関数
 var addMinutes = function(date, minutes)
     {
         return new Date(date.getTime() + minutes * 60000);
@@ -120,8 +117,7 @@ var UserSchema = new mongoose.Schema({
     twitter     : {type: String}
 });
 
-//todo 位置情報保持モデル
-//http://yone-public.blogspot.jp/2012/11/mongoose1.html
+//位置情報保持モデル
 var LocSchema = new mongoose.Schema({
     valid          : {type: Boolean, required: true},
     time           : {type: Date, required: true},
@@ -138,6 +134,7 @@ var LocSchema = new mongoose.Schema({
 });
 
 //todo グループ管理モデル
+//http://yone-public.blogspot.jp/2012/11/mongoose1.html
 /* 構造案
     groupname  
     users      
@@ -154,6 +151,7 @@ var UserInfo = db.model('User', UserSchema);
 var LocInfo  = db.model('Locinfo', LocSchema);
 
 //認証ロジック
+//互換性のためにとりあえずbasic認証
 passport.use(new BasicStrategy(
     function(userid, password, done) {
         process.nextTick(function(){
@@ -173,9 +171,6 @@ passport.use(new BasicStrategy(
         });
     }
 ));
-
-//デバッグ用のグローバル変数
- _TEST_ = {};
 
 //--------- 全体向け -----------
 
@@ -224,6 +219,7 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
 //優先度高めだけどあとで
 //ユーザ情報を更新
 //独自実装？
+//RESTFulならPUT
 app.post('/user', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     res.status(404).send('Sorry, we cannot find that!');
@@ -236,11 +232,12 @@ app.get('/user/gpx', passport.authenticate('basic', { session: false }), functio
     console.log('id:' + req.query.id);
 
     res.set('Content-Type', 'text/xml; charset=utf-8');
-    res.status(404).send('Sorry, we cannot find that!');
+    res.status(404).send('Sorry, we cannot find that!\n' + getHash(req.query.id + '0000'));
 });
 
 //そのうち
 //ユーザー情報を更新
+//RESTFulならPUT
 app.post('/user/update_userinfo', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     console.log('nickname:'     + req.body.nickname);
@@ -272,6 +269,7 @@ app.post('/user/update_userinfo', passport.authenticate('basic', { session: fals
 
 //そのうち
 //指定した過去データを削除
+//RESTFulならDELETE
 app.get('/user/delete_data', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     console.log('id:' + req.query.id);
@@ -284,6 +282,7 @@ app.get('/user/delete_data', passport.authenticate('basic', { session: false }),
 
 //そのうち
 //指定した過去データの公開・非公開を設定
+//RESTFulならPUT
 app.get('/user/set_public', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     console.log('id:' + req.query.id);
@@ -295,7 +294,6 @@ app.get('/user/set_public', passport.authenticate('basic', { session: false }), 
     res.send('(' + JSON.stringify(d) + ')'); 
 });
 
-//使ってる？
 //指定したユーザーの情報を取得
 app.get('user/getuserinfo', function(req, res){
     cInfo(req);
@@ -318,7 +316,7 @@ app.get('user/getuserinfo', function(req, res){
                     d.result = 0;
                 } else {
                     d.result       = 1;
-//                  d.name         = result.nickname    ;//nullと文字化け対策
+//                  d.name         = result.nickname    ;// todo nullと文字化け対策
                     d.ust          = result.ust         ;
                     d.channel_id   = result.nicolive    ;
                     d.chat_channel = ""                 ;
@@ -348,26 +346,12 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     if (req.body.save){
     }
 
-    //テスト用にとりあえず変数に保持
-    _TEST_.valid          = true;
-    _TEST_.time           = req.user.time;
-    _TEST_.user           = req.user.userid;
-    _TEST_.nickname       = req.user.nickname;
-    _TEST_.lat            = req.body.lat;
-    _TEST_.lon            = req.body.lon;
-    _TEST_.dir            = req.body.gpsd;
-    _TEST_.altitude       = req.body.gpsh;
-    _TEST_.velocity       = req.body.gpsv;
-    _TEST_.type           = req.body.t;
-    _TEST_.ustream_status = "offline";
 
-
-    //todo 日付がUTCで入る
     var locinfo = new LocInfo();
     locinfo.valid          = true;
-    locinfo.time           = req.body.time;
+    locinfo.time           = req.body.time;     //日付がUTCで入る
     locinfo.user           = req.user.userid;
-    locinfo.nickname       = req.user.nickname;
+    locinfo.nickname       = req.user.nickname; //todo 文字化け対策
     locinfo.lat            = req.body.lat;
     locinfo.lon            = req.body.lon;
     locinfo.dir            = req.body.gpsd;
@@ -375,7 +359,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     locinfo.velocity       = req.body.gpsv;
     locinfo.type           = req.body.t;
     locinfo.flag           = '1';
-    locinfo.ustream_status = 'offline';
+    locinfo.ustream_status = 'offline';         //jsonの互換性のために残してるだけ
 
     locinfo.save(function(err){
         if(err){
@@ -391,7 +375,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
 app.get('/api/user_list', function(req, res){
     cInfo(req);
 
-    //todo 日付の計算 ex.現在時刻-5分以上？
+    //直近5分以内にデータ送信のあったユーザをアクティブとする
     LocInfo.aggregate(
         {$match : {time : {"$gte" : addMinutes(new Date, -5)}}},
         {$group : {_id  : {valid : "$valid",
@@ -426,173 +410,9 @@ app.get('/api/user_list', function(req, res){
 app.get('/api/latest', function(req, res){
     cInfo(req, ' user:' + req.query.user);
 
-    //無条件エラー
-    var d={};
-    d.result = 0;
-    d.errmsg = 'err test msg.';
-    res.set('Content-Type', 'text/javascript; charset=utf-8');
-    res.send('(' + JSON.stringify(d) + ')');
-    return;
-    
-    //todo mongoのnested findでデータとれないのなおす
-    //yieldかasyncでなんとかなるかためしたけどだめぽ
-/*
-async.parallel([
-    function(cb){
-        //現在オンラインのユーザー探す
-        LocInfo.distinct(
-            "user",
-            {time:{"$gte" : addMinutes(new Date, -5)}},
-            cb
-        );
-    },
-    
-]
-,function(err, result){
-    if (err) {
-        var d    = {};
-        d.result = 0;
-        d.errmsg = 'api/user_list is error.(distinct)';
-        res.set('Content-Type', 'text/javascript; charset=utf-8');
-        res.send('(' + JSON.stringify(d) + ')'); 
-        return;
-    }
-    console.log("async1:" +utill.inspect(result));
-    
-    pboints = [];
-    
-    for (var i = 0; i < result.length; i++) {
-        async.parallel([
-            function(cb){
-        console.log(result[i]);
-                LocInfo.find(
-                    {user : result[i], time:{"$gte" : addMinutes(new Date, -5)}},
-                    {_id : 0, flag : 0}
-                ,cb
-                ).sort({time: -1}).limit(1);
-           }
-        ], function(err, results){
-           this.points.push(results);
-            console.log("async2:" +utill.inspect(this.points));
-        });
-    }//for
-
-    console.log("async3:" +utill.inspect(points));
-
-
-});
-*/
-
-
-
-/*
-async.parallel([
-    function(cb){
-        //現在オンラインのユーザー探す
-        LocInfo.distinct(
-            "user",
-            {time:{"$gte" : addMinutes(new Date, -5)}},
-            cb
-        );
-    }
-]
-,function(err, result){
-    if (err) {
-        var d    = {};
-        d.result = 0;
-        d.errmsg = 'api/user_list is error.(distinct)';
-        res.set('Content-Type', 'text/javascript; charset=utf-8');
-        res.send('(' + JSON.stringify(d) + ')'); 
-        return;
-    }
-    console.log("async1:" +utill.inspect(result));
-    
+    //ユーザ座標
     var points = [];
-    
-    async.parallel([
-        function(cb){
-            for (var i = 0; i < result.length; i++) {
-                console.log(result[i]);
-                LocInfo.find(
-                    {user : result[i], time:{"$gte" : addMinutes(new Date, -5)}},
-                    {_id : 0, flag : 0}
-                ,cb
-                ).sort({time: -1}).limit(1);
-            }//for
-       }
-    ], function(err, results){
-       points.push(results);
-        console.log("async2:" +utill.inspect(points));
-    });
-
-    console.log("async3:" +utill.inspect(points));
-});
-
-*/
-
-/*
-
-var points=[];
-
-            //もうちょっといいやり方探す
-            for (var i = 0; i < result.length; i++) {
-//co(function *(){
-                //アクティブユーザのログ
-                var resp;
-//                resp = yield 
-async.parallel([
-    function(cb){
-console.log(result[i]);
-        LocInfo.find(
-            {user : result[i], time:{"$gte" : addMinutes(new Date, -5)}},
-            {_id : 0, flag : 0}
-        ,cb
-        ).sort({time: -1}).limit(1);
-   }
-], function(err, results){
-   // results contains both users and articles
-    console.log("async2:" +utill.inspect(results));
-   points.push(results);
-});
-
-
-                LocInfo.find(
-                    {user : result[i], time:{"$gte" : addMinutes(new Date, -5)}},
-                    {_id : 0, flag : 0}
-
-                   ,function (err, result){
-                        //ここのデータをなんとかして外に出したい
-//                    console.log(utill.inspect(this.points));
-                        cbSetLatest(result);
-                    }
-
-                ).sort({time: -1}).limit(1).exec();
-//console.log("co");
-
-//                console.log("h:" +utill.inspect(resp));
-
-//                console.log("h:" +utill.inspect(this.points));
-
-
-
-//                console.log(utill.inspect(cbSendLatest(err, result)));
-
-//                console.log("out:" + utill.inspect(_TEST));
-//console.log("gOut2:" + utill.inspect(this.global));
-//});
-
-            }
-                console.log("p:" +utill.inspect(points));
-        }
-    );
-*/
-
-/*
-
-
-    var d={};
-    var points = [];
-    var latest ={};
+    var req_user = '';
 
     //todo ユーザ絞込み
     //ユーザリストの型を調べる
@@ -601,46 +421,61 @@ console.log(result[i]);
         case 'all':
             break;
         default:
+            var temp = req.query.user.split(',');
+            var req_u =[];
+
+            for (var i = 0 ; i < temp.length ; i++){
+                var x ={};
+                x.user = temp[i];
+                req_u.push(x);
+            }
+            req_user = '$or : ' + JSON.stringify(req_u) + ', ';
+            //$or:[ {age:20}, {age:40} ]
+
             break;
     }
 
-    
-    if (false){
-        var d={};
-        d.result = 0;
-        d.errmsg = 'err test msg.';
-        res.set('Content-Type', 'text/javascript; charset=utf-8');
-        res.send('(' + JSON.stringify(d) + ')');
-    } else {
-        //test bot
-        //test ほぼ大阪城
-        latest ={};
-        latest.valid          = true;
-        latest.user           = "testbot";
-        latest.nickname       = "testbot";
-        latest.lat            = 34.6873316;
-        latest.lon            = 135.5238653;
-        latest.dir            = 0;
-        latest.altitude       = 3600;
-        latest.velocity       = 0;
-        latest.type           = 0;
-        latest.ustream_status = "offline";
-        
-        points.push(latest); //大阪城
-        points.push(_TEST_); //クライアントから
-        
-        //仕様固まったらmongodb使う
-        
-        d.result = 1;
-        d.points = points;
-        d.group_updated = false;
+console.log(utill.inspect(req_user));
 
-    }
-    res.set('Content-Type', 'text/javascript; charset=utf-8');
-    res.send('(' + JSON.stringify(d) + ')');
-*/
+    //現在オンラインのユーザー探す
+    LocInfo.distinct(
+        "user",
+        { time:{"$gte" : addMinutes(new Date, -5)}},
+
+        function(err, result){
+            if (err) {
+                var d    = {};
+                d.result = 0;
+                d.errmsg = 'api/latest is error.(distinct)';
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')'); 
+                return;
+            }
+
+            for (var i = 0; i < result.length; i++) {
+                LocInfo.find(
+                    {user : result[i], time:{"$gte" : addMinutes(new Date, -5)}},
+                    {_id : 0, __v : 0, time : 0, flag : 0},
+
+                    function(err, results){
+                        points.push(results[0]);
+
+                        if (points.length >= result.length){
+
+                            var d={};
+                            d.result = 1;
+                            d.points = points;
+                            //d.group_updated = false;
+
+                            res.set('Content-Type', 'text/javascript; charset=utf-8');
+                            res.send('(' + JSON.stringify(d) + ')');
+                       }
+                    }
+                ).sort({time: -1}).limit(1);
+            }
+        }
+    );
 });
-
 
 //やらない
 //逆ジオコード変換
@@ -678,7 +513,7 @@ app.get('/api/getuserinfo', function(req, res){
                     d.result = 0;
                 } else {
                     d.result       = 1;
-//                  d.name         = result.nickname    ;//nullと文字化け対策
+                    d.name         = result.nickname    ;//todo nullと文字化け対策
                     d.ust          = result.ust         ;
                     d.channel_id   = result.nicolive    ;
                     d.chat_channel = ""                 ;
@@ -729,6 +564,7 @@ app.post('/api/creategroup', passport.authenticate('basic', { session: false }),
 
 //そのうち
 //グループ情報を更新
+//RESTFulならPUT
 app.post('/api/updategroup', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     console.log('group:' + req.body.group);
@@ -745,6 +581,7 @@ app.post('/api/updategroup', passport.authenticate('basic', { session: false }),
 
 //そのうち
 //グループ情報を削除
+//RESTFulならDELETE
 app.get('/api/deletegroup', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     console.log('group:' + req.query.group);
@@ -777,6 +614,7 @@ app.post('/api/addmarker', passport.authenticate('basic', { session: false }), f
 
 //そのうち
 //グループ共有マーカーを削除
+//RESTFulならDELETE
 app.get('/api/deletemarker', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     console.log('group:' + req.query.group);
@@ -792,6 +630,7 @@ app.get('/api/deletemarker', passport.authenticate('basic', { session: false }),
 
 //仕様調べる
 //直近の座標を削除？
+//RESTFulならDELETE
 app.get('/api/delpost', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
     console.log(utill.inspect(req.body));
@@ -803,7 +642,7 @@ app.get('/api/delpost', passport.authenticate('basic', { session: false }), func
 
 //ログインテスト
 app.get('/api/logintest', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req, req.user.userid);
+    cInfo(req, req.user.userid + ":" + req.user.password);
 
     //todo 試験的にテストデータ作る処理を入れる？
 /*
