@@ -30,6 +30,7 @@ var reset   = '\u001b[0m';
 
 //モジュール宣言
 require('date-utils');
+var fs = require('fs');
 var http = require('http');
 var express = require('express');
 var domain = require('express-domain-middleware');
@@ -130,7 +131,8 @@ var LocSchema = new mongoose.Schema({
     velocity       : {type: Number},
     type           : {type: String},
     flag           : {type: String},
-    ustream_status : {type: String}
+    ustream_status : {type: String},
+    saved          : {type: String}
 });
 
 //todo グループ管理モデル
@@ -174,6 +176,9 @@ passport.use(new BasicStrategy(
 
 //--------- 全体向け -----------
 
+//静的なファイルのルーティング
+app.use(express.static('wui'));
+
 //そのうち
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
@@ -195,8 +200,11 @@ app.get('/view_data', function(req, res){
     res.status(404).send('Sorry, we cannot find that!');
 });
 
-//優先度高め
-//静的なファイルのルーティング
+//ユーザー情報を表示
+app.get('/home/*', function(req, res){
+    cInfo(req);
+    res.status(404).send('Sorry, we cannot find that!');
+});
 
 
 //--------- /user -----------
@@ -205,7 +213,19 @@ app.get('/view_data', function(req, res){
 //ユーザー名のpng画像を返す
 app.get('/user/*.png', function(req, res){
     cInfo(req);
-    res.status(404).send('Sorry, we cannot find that!');
+    console.log(req.url);
+
+    fs.readFile('./wui/img' + req.url,
+                function(err, data){
+                    if (err) {
+                        //todo なければ本家から取得する
+                        res.status(404).send('Sorry, we cannot find that!');
+                    } else {
+                        res.send(data, { 'Content-Type': 'image/png' }, 200);
+                    }
+                }
+               );
+
 });
 
 //優先度高めだけどあとで
@@ -213,6 +233,7 @@ app.get('/user/*.png', function(req, res){
 //独自実装？
 app.get('/user', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
+    //todo ユーザ情報の編集ページを返す
     res.status(404).send('Sorry, we cannot find that!');
 });
 
@@ -222,6 +243,9 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
 //RESTFulならPUT
 app.post('/user', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
+    //編集ページからのデータを更新
+    // user/update_userinfo でもいいんじゃないかなこれ
+    
     res.status(404).send('Sorry, we cannot find that!');
 });
 
@@ -312,11 +336,11 @@ app.get('user/getuserinfo', function(req, res){
             function (err, result) {
                 var d={};
 
-                if (err) {
+                if (err || result === null) {
                     d.result = 0;
                 } else {
                     d.result       = 1;
-//                  d.name         = result.nickname    ;// todo nullと文字化け対策
+                    d.name         = result.nickname    ;// todo nullと文字化け対策
                     d.ust          = result.ust         ;
                     d.channel_id   = result.nicolive    ;
                     d.chat_channel = ""                 ;
@@ -341,12 +365,6 @@ app.get('user/getuserinfo', function(req, res){
 app.post('/api/post', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req, req.user.userid);
 
-    //データ保存するか
-    //todo リプレイ用にとっておくなら無視？
-    if (req.body.save){
-    }
-
-
     var locinfo = new LocInfo();
     locinfo.valid          = true;
     locinfo.time           = req.body.time;     //日付がUTCで入る
@@ -359,6 +377,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     locinfo.velocity       = req.body.gpsv;
     locinfo.type           = req.body.t;
     locinfo.flag           = '1';
+    locinfo.saved          = req.body.save;     //jsonの互換性のために残してるだけ
     locinfo.ustream_status = 'offline';         //jsonの互換性のために残してるだけ
 
     locinfo.save(function(err){
@@ -370,7 +389,6 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     });
 });
 
-//優先度高め
 //現在のユーザー一覧を取得
 app.get('/api/user_list', function(req, res){
     cInfo(req);
@@ -405,44 +423,38 @@ app.get('/api/user_list', function(req, res){
     );
 });
 
-//優先度高め
 //最新の位置情報を取得
 app.get('/api/latest', function(req, res){
     cInfo(req, ' user:' + req.query.user);
 
     //ユーザ座標
     var points = [];
-    var req_user = '';
+    var req_user =[];
 
-    //todo ユーザ絞込み
-    //ユーザリストの型を調べる
+    //ユーザ絞込み
     switch (req.query.user){
         case undefined:
         case 'all':
+            var x ={};
+            req_user.push(x);
             break;
         default:
             var temp = req.query.user.split(',');
-            var req_u =[];
 
             for (var i = 0 ; i < temp.length ; i++){
                 var x ={};
                 x.user = temp[i];
-                req_u.push(x);
+                req_user.push(x);
             }
-            req_user = '$or : ' + JSON.stringify(req_u) + ', ';
-            //$or:[ {age:20}, {age:40} ]
-
             break;
     }
-
-console.log(utill.inspect(req_user));
 
     //現在オンラインのユーザー探す
     LocInfo.distinct(
         "user",
-        { time:{"$gte" : addMinutes(new Date, -5)}},
-
+        {$or : req_user, time:{"$gte" : addMinutes(new Date, -5)}},
         function(err, result){
+            //何かしらのエラー
             if (err) {
                 var d    = {};
                 d.result = 0;
@@ -452,10 +464,21 @@ console.log(utill.inspect(req_user));
                 return;
             }
 
+            //該当ユーザなし
+            if (result.length === 0) {
+                var d    = {};
+                d.result = 1;
+                d.points = points;
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')');
+                return;
+            }
+
+            //オンラインユーザの直近の位置を取得
             for (var i = 0; i < result.length; i++) {
                 LocInfo.find(
                     {user : result[i], time:{"$gte" : addMinutes(new Date, -5)}},
-                    {_id : 0, __v : 0, time : 0, flag : 0},
+                    {_id : 0, __v : 0, time : 0, flag : 0, saved : 0},
 
                     function(err, results){
                         points.push(results[0]);
@@ -465,6 +488,8 @@ console.log(utill.inspect(req_user));
                             var d={};
                             d.result = 1;
                             d.points = points;
+                            //todo グループ機能やることがあれば対応
+                            //そもそもAPI仕様書に存在しない
                             //d.group_updated = false;
 
                             res.set('Content-Type', 'text/javascript; charset=utf-8');
@@ -509,7 +534,7 @@ app.get('/api/getuserinfo', function(req, res){
             function (err, result) {
                 var d={};
 
-                if (err) {
+                if (err || result === null) {
                     d.result = 0;
                 } else {
                     d.result       = 1;
@@ -643,23 +668,14 @@ app.get('/api/delpost', passport.authenticate('basic', { session: false }), func
 //ログインテスト
 app.get('/api/logintest', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req, req.user.userid + ":" + req.user.password);
+    
+    //ユーザー登録APIを作るまでの暫定対応
+    //todo 本家鯖からユーザー名のpng画像を取得する
 
-    //todo 試験的にテストデータ作る処理を入れる？
-/*
-    var _User = new UserInfo();
-    _User.userid   = 'botuser';
-    _User.nickname = 'botuser';
-    _User.password = getHash('botuser');
-    _User.email    = 'botuser@example.com';
-    _User.save();
-*/
     res.send('OK');
 });
 
 //サーバー起動
 http.createServer(app).listen(app.get('port'), function(){
-  console.log('['+ cyan +'INFO' + reset + '] Express server listening on port ' + app.get('port'));
+  console.log('['+ cyan +'INFO' + reset + '] ImacocoNow server listening on port: ' + app.get('port'));
 });
-
-//app.listen(port);
-

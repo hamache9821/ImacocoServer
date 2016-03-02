@@ -47,7 +47,8 @@ var plot_icon;
 var group_revision = '';
 var traceuser = '';
 var prev_trace = '';
-var static_file_site = 'http://proxy.589406.com/img/';
+var username_file_site = ''; //'http://www.fujita-lab.com/imakoko';
+
 var icon_image_value = 11;
 var initializeFlag = true;
 var defaultDirectionIcon = new Array();
@@ -269,7 +270,7 @@ function initialize() {
 	
 	// プロットアイコン
 	plot_icon = new google.maps.MarkerImage(
-		static_file_site + 'aka.png',
+		'/img/aka.png',
 		new google.maps.Size(4, 4),
 		null,
 		new google.maps.Point(2, 2)
@@ -325,7 +326,7 @@ function initialize() {
 // 更新処理
 function update() {
 	// 位置情報を取得する
-	$.getJSON('/api/latest.php',
+	$.getJSON('/api/latest',
 		{
 			t : new Date().getTime()
 		},
@@ -534,14 +535,14 @@ function makeDirectionIcon(td, type) {
 
 	if (!isNaN(td)) {
 		ic = new google.maps.MarkerImage(
-			static_file_site + 'middle_arrow_mini.png',
+			'/img/middle_arrow_mini.png',
 			new google.maps.Size(34, 34),
 			new google.maps.Point(parseInt(td) * 34, 0),
 			new google.maps.Point(17, 17)
 		);
 	} else {
 		ic = new google.maps.MarkerImage(
-			static_file_site + 'direction_icon.png',
+			'/img/direction_icon.png',
 			new google.maps.Size(32, 32),
 			new google.maps.Point(type * 32, 0),
 			new google.maps.Point(16, 16)
@@ -566,7 +567,7 @@ function getDirectionIcon(td, type, username) {
 				// アイコンを取得する
 				$.ajax({
 					type : 'GET',
-					url : '/api/getuserinfo.php',
+					url : '/api/getuserinfo',
 					data :
 						{
 							user : username,
@@ -598,7 +599,7 @@ function getDirectionIcon(td, type, username) {
 			}
 		} else{
 			var ic = new google.maps.MarkerImage(
-				static_file_site + 'direction_icon.png',
+				'/img/direction_icon.png',
 				new google.maps.Size(32, 32),
 				new google.maps.Point(11 * 32, 0),
 				new google.maps.Point(16, 16)
@@ -625,7 +626,7 @@ function makeStreamMarker(stream, pt) {
 		origin = 2;
 	}
 	ic = new google.maps.MarkerImage(
-		static_file_site + 'stream_icon.png',
+		'/img/stream_icon.png',
 		new google.maps.Size(16, 16),
 		new google.maps.Point(16 * origin, 0),
 		new google.maps.Point(-6, -6)
@@ -646,7 +647,7 @@ function makeStreamMarker(stream, pt) {
 function initUser(username, flag) {
 	if (username) {
 		var nick_icon = new google.maps.MarkerImage(
-			'http://www.fujita-lab.com/imakoko/user/' + encodeURIComponent(username) + '.png',
+			'/user/' + encodeURIComponent(username) + '.png',
 			null,
 			null,
 			new google.maps.Point(0, 24)
@@ -755,7 +756,7 @@ function createClickableMarker(pt, username) {
 				// 位置情報を取得する
 				$.ajax({
 					type : 'GET',
-					url : '/api/getuserinfo.php',
+					url : '/api/getuserinfo',
 					data :
 						{
 							user : username,
