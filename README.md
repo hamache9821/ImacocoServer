@@ -1,4 +1,5 @@
 # ImacocoServer
+----
 [今ココなう！](http://www.imacoconow.net/ "今ココなう！")互換のサーバを作るプロジェクト
 
 
@@ -48,20 +49,30 @@ ust : "", jtv : "", nicolive : "", show : "1", web : "http://example.com", descr
 こんなかんじ  
 ※パスワードは適当にハッシュ化してね
 
-
 ライセンス
 ----
 MIT
 
 なので、商用利用したいとか、こういう機能が欲しいとかは勝手にforkしてやればいいと思うよ。
 
+###環境構築方法(Debianの場合・他は知らない)  
+* nvmとNode.jsをインストール
+``` sh
+$ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | sh
+$ nvm install 5.6.0
+```  
+* [MongoDB](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-debian/)をインストール  
+``` sh
+$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+$ echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+$ sudo apt-get update
+$ sudo apt-get install -y mongodb-org
+```
 
 ###その他
- Q.インストール方法教えて！  
- A.お 前 の 目 は 節 穴 か  
-
+ Q.インストール方法教えて！
+ A.お 前 の 目 は 節 穴 か
+ 
  Q.なんかおかしいんだけど  
  A.エスパーじゃないので、何がおかしいか具体的に言ってもらわないとわかんないです。  
    というか、現段階ではソース読んで何が起きるのかわからない人にはお勧めできません。
-
- 
