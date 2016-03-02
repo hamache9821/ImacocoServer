@@ -10,8 +10,8 @@
 
 ### 動作環境
 * Node.js と MongoDBの動くマシン
-* ストレージを積めるだけ
-* > 1ユーザが8,640Post/Day(10秒に一回で24時間)データを送信した場合に、約1.3MBのストレージが必要です。
+* ストレージを積めるだけ  
+> 1ユーザが8,640Post/Day(10秒に一回で24時間)データを送信した場合に、約1.3MBのストレージが必要です。
 
 ### 使い方
 
@@ -25,32 +25,28 @@ $ node app.js
 ```
 
 ### APIの実装状況
-基本的には[今ココなう！(β):API](http://www.fujita-lab.com/imakoko/api.html "今ココなう！(β):API")の仕様を踏襲していますので、
-
-各クライアントツールとproxyの接続先サーバを自前のものに変えるだけで動きます。素敵！
-
-※googleMap API Key等は各自で用意してください。
+基本的には[今ココなう！(β):API](http://www.fujita-lab.com/imakoko/api.html "今ココなう！(β):API")の仕様を踏襲していますので、  
+各クライアントツールとproxyの接続先サーバを自前のものに変えるだけで動きます。素敵！  
+※googleMap API Key等は各自で用意してください。  
 
 現時点で実装しているAPI
 * user/getuserinfo
 * api/post
 * api/user_list
-* api/latest
-* api/getuserinfo　※user絞り込みは未実装
+* api/latest  ※user絞り込みは未実装
+* api/getuserinfo
 * api/logintest
 
-### ユーザー登録とか
-そのうちAPIの中身を実装しますので、できるまではmongoのconsoleで適当に追加してください。
+### ユーザー登録方法
+APIの実装がまだなので、使いたい方はmongoのconsoleで適当に追加してください。
 
 ```mongo
 > use ImacocoDB
-> db.users.insert({userid : "testuser", password : "hashed_password", email : "testuser@example.com", nickname : "testuser", ust : "", jtv : "", nicolive : "", show : "", web : "http://example.com", description : "", popup : "", speed : "", twitter : ""});
+> db.users.insert({userid : "testuser", password : "hashed_password", email : "testuser@example.com", nickname : "testuser",   
+ust : "", jtv : "", nicolive : "", show : "1", web : "http://example.com", description : "", popup : "", speed : "0", twitter : ""});
 ```
-こんなかんじ
-
+こんなかんじ  
 ※パスワードは適当にハッシュ化してね
-
-
 
 
 ライセンス
@@ -58,3 +54,14 @@ $ node app.js
 MIT
 
 なので、商用利用したいとか、こういう機能が欲しいとかは勝手にforkしてやればいいと思うよ。
+
+
+###その他
+ Q.インストール方法教えて！  
+ A.お 前 の 目 は 節 穴 か  
+
+ Q.なんかおかしいんだけど  
+ A.エスパーじゃないので、何がおかしいか具体的に言ってもらわないとわかんないです。  
+   というか、現段階ではソース読んで何が起きるのかわからない人にはお勧めできません。
+
+ 
