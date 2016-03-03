@@ -1,0 +1,321 @@
+/** 全体標準設定 */
+body {
+	font-size:70%;
+	font-family:verdana, arial, helvetica, sans-serif;
+	color:#333;
+	background-color:white;
+	margin:0;
+	padding:0;
+	}
+
+p {margin:0 0 1em;}
+
+a {
+	color:#09c;
+	text-decoration:none;
+	font-weight:600;
+	}
+a:link {color:#09c;}
+a:visited {color:#07a;}
+a:hover {background-color:#eee;}
+
+h1 {
+	color:#333333;
+	font-size:1.2em;
+	line-height:1.1em;
+	font-weight:800;
+	font-family:verdana, arial, helvetica, sans-serif;
+	margin:0;
+	padding:0;
+	}
+h2 {
+	color:#333333;
+	font-size:1.4em;
+	font-weight:800;
+	margin:0 0 .8em;
+	}
+h3 {
+	color:#555555;
+	font-size:1.2em;
+	font-weight:700;
+	margin:0 0 .8em;
+	}
+
+blockquote {
+	margin:1em 2.7em 1.36em;
+	color:#777777;
+	line-height:1.5;
+	}
+	
+img {border-width:0;}
+	
+/** 本文 */
+
+#Content {
+	padding:10px 15px 15px 15px;
+	}
+
+ul.list {
+	list-style-type:square;
+	margin:0;
+	padding:0;
+	}
+
+ol.list {
+	list-style-type:decimal;
+	margin:0;
+	padding:0;
+	}
+
+#Content h2{
+	background-image:url(h.gif);
+	background-repeat:no-repeat;
+	background-position:center left;
+	padding-left:8px;
+	}
+
+#Content h3{
+	background-image:url(h.gif);
+	background-repeat:no-repeat;
+	background-position:center left;
+	padding-left:8px;
+	}
+
+#desc { margin-left: 1.8em; }
+
+#morep {margin:0 0 3em;}
+
+
+/** ページタイトル */
+#Header {
+	width:100%;
+	margin-top:5px;
+	height:32px;
+	border-color:black;
+	border-style:solid;
+	border-width:1px 0;
+	}
+
+#headerTitle {
+	height:16px;
+	padding:14px 0 0 25px;
+	color:#333333;
+	font-size:16px;
+	font-weight:800;
+	}
+
+/** TopPageのみフローティングさせるため */
+#TopMain {
+	margin-top:1.5em;
+	clear:left;
+	float:left;
+	width:70%;
+	}
+
+/** 開発経緯に関する記述 */
+#About {
+	float:left;
+	width: 200px;
+	margin-top:1.5em;
+	padding:0 10px 40px;
+	background-image:url(vert.gif);
+	background-repeat:repeat-y;
+	}
+#About h2 {
+	color:#888888;
+	font-size:1.1em;
+	font-weight:800;
+	margin:.86em 0 .214em;
+	}
+#About p {
+	font-size:.9em;
+	line-height:1.5;
+	margin:0 0 2em;
+	}
+
+#aboutDesc{
+	padding-left:1em;
+	}
+
+/** フッター */
+#Footer{
+	clear:both;
+    bottom:0px;
+    height:30px;
+    width:100%;
+   	border-color:black;
+	border-style:solid;
+	border-width:1px 0 0 0;
+}
+
+
+/** フッター */
+#FooterYahoo{
+	clear:both;
+    bottom:0px;
+    height:30px;
+    width:100%;
+   	border-color:black;
+	border-style:solid;
+	border-width:1px 0 0 0;
+	background-image:url(http://i.yimg.jp/images/yjdn/yjdn_attbtn1_88_35.gif);
+	background-repeat:no-repeat;
+	background-position:center right;
+	background-margin: 15px 15px 15px 15px;
+}
+
+#FooterNoLogo{
+	clear:both;
+    bottom:0px;
+    height:30px;
+    width:100%;
+   	border-color:black;
+	border-style:solid;
+	border-width:1px 0 0 0;
+	background-repeat:no-repeat;
+	background-position:center right;
+}
+
+/** ダウンロード説明文用 テーブル */
+table.dl {
+  margin-top: 0.2em;
+  margin-bottom: 1em;
+  width: 300px;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 100%;
+}
+
+table.dl caption {
+  margin-top: 1em;
+  text-align: left;
+  font-weight:500;
+}
+
+table.dlDesc th,
+table.dlDesc td {
+  padding: 4px 6px;
+}
+
+table.dl th {
+  border-bottom: solid 1px #B2B2B2;
+  border-right: solid 1px #B2B2B2;
+  background: #D9D9F3;
+  text-align: center;
+  white-space: nowrap;
+}
+
+table.dl td {
+  border-bottom: solid 1px #B2B2B2;
+  border-right: solid 1px #B2B2B2;
+  background: #F3F3F3;
+  text-align: left;
+}
+
+/** ダウンロード説明文用 テーブル */
+table.dlDesc {
+  margin-top: 0.2em;
+  margin-bottom: 1em;
+  width: 570px;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 100%;
+}
+
+table.dlDesc caption {
+  margin-top: 1em;
+  text-align: left;
+  font-weight:500;
+}
+
+table.dlDesc th,
+table.dlDesc td {
+  padding: 4px 6px;
+}
+
+table.dlDesc th {
+  border-bottom: solid 1px #B2B2B2;
+  border-right: solid 1px #B2B2B2;
+  background: #D9D9F3;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 92%;
+}
+
+table.dlDesc td {
+  border-bottom: solid 1px #B2B2B2;
+  border-right: solid 1px #B2B2B2;
+  background: #F3F3F3;
+  text-align: left;
+}
+
+/** FORM用 テーブル */
+table.form {
+  margin-top: 0.2em;
+  margin-bottom: 1em;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 100%;
+}
+
+table.form caption {
+  margin-top: 1em;
+  text-align: left;
+  font-weight:500;
+}
+
+table.form th,
+table.dlDesc td {
+  padding: 4px 6px;
+}
+
+table.form th {
+  border-bottom: solid 1px #B2B2B2;
+  border-right: solid 1px #B2B2B2;
+  background: #D3D3D3;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 92%;
+}
+
+table.form td {
+  border-bottom: solid 1px #B2B2B2;
+  border-right: solid 1px #B2B2B2;
+  background: #F3F3F3;
+  text-align: left;
+}
+
+
+.hide { display: none; }
+.w100 { width: 100%; }
+.w45 { width: 45%; }
+.w10 { width: 10%; }
+.center { aligh: center; }
+.vcenter { valign: center; }
+.required { color: red; font-size: 80%; }
+
+.red { color: red; }
+.font150 { font-size: 150% }
+
+ul {
+  padding-left: 16px;
+  margin-left: 16px;
+}
+
+ul.list1 li { list-style-type: disc; }
+ul.list2 li { list-style-type: circle; }
+ul.list3 li { list-style-type: square; }
+ol.list1 li { list-style-type: decimal; }
+ol.list2 li { list-style-type: lower-roman; }
+ol.list3 li { list-style-type: lower-alpha; }
+
+div.eula {
+  width:600px;
+  height:240px;
+  text-align:left;
+  padding: 4px;
+  mergin: 4px;
+  overflow-x:hidden;
+  overflow-y:scroll;
+  border: solid 2px;
+}

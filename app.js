@@ -54,6 +54,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.set('port', port);
 
+//var ejsEngine = require('ejs').someFunc;
+//app.engine('ejs', ejsEngine);
+app.set('views', __dirname + '/views');
+app.set('view engine', 'ejs');
 
 //todo このへんのはそのうちモジュール化したい
 //パスワードをハッシュ化するやつ
@@ -207,6 +211,53 @@ app.get('/home/*', function(req, res){
 });
 
 
+//そのうち
+//ユーザ作成
+app.get('/create_user', function(req, res){
+    cInfo(req);
+
+    res.render('create_user',
+               {}
+              );
+});
+
+//ユーザ作成
+app.post('/create_user', function(req, res){
+    cInfo(req);
+
+    console.log('nickname:'     + req.body.nickname);
+    console.log('email:'          + req.body.email);
+    console.log('username:'          + req.body.username);
+    console.log('password:'     + req.body.password);
+    console.log('password2:'         + req.body.password2);
+
+
+    //todo ユーザ存在チェック
+    
+/*
+    var _User = new UserInfo();
+    _User.userid   = req.body.username;
+    _User.nickname = req.body.nickname;
+    _User.password = getHash(req.body.password);
+    _User.email    = req.body.email;
+*/
+
+//    _User.save();
+
+
+    console.log(utill.inspect(req.body));
+    
+    res.status(404).send('Sorry, we cannot find that!');
+});
+
+//そのうち
+//パスワード変更受付
+app.post('/change_password_request', function(req, res){
+    cInfo(req);
+    res.status(404).send('Sorry, we cannot find that!');
+});
+
+
 //--------- /user -----------
 
 //優先度高め
@@ -228,25 +279,33 @@ app.get('/user/*.png', function(req, res){
 
 });
 
-//優先度高めだけどあとで
-//ユーザーページを表示
-//独自実装？
+//ユーザ情報の編集ページを表示
 app.get('/user', passport.authenticate('basic', { session: false }), function(req, res){
     cInfo(req);
-    //todo ユーザ情報の編集ページを返す
-    res.status(404).send('Sorry, we cannot find that!');
-});
 
-//優先度高めだけどあとで
-//ユーザ情報を更新
-//独自実装？
-//RESTFulならPUT
-app.post('/user', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
-    //編集ページからのデータを更新
-    // user/update_userinfo でもいいんじゃないかなこれ
-    
-    res.status(404).send('Sorry, we cannot find that!');
+    UserInfo.findOne(
+        {userid : req.user.userid},
+        function (err, result) {
+            if (err || result === null) {
+                res.status(404).send('Sorry, we cannot find that!');
+            } else {
+                res.render('user',
+                           {userid      : req.user.userid,
+                            nickname    : result.nickname,
+                            twitter     : result.twitter,
+                            ust         : result.ust,
+                            jtv         : result.htv,
+                            nicolive    : result.nicolive,
+                            web         : result.web,
+                            description : result.description,
+                            show        : Boolean(result.show),
+                            speed       : Boolean(result.speed),
+                            popup       : result.popup
+                           }
+                          );
+            }
+        }
+    );
 });
 
 //いつかやる
@@ -259,36 +318,48 @@ app.get('/user/gpx', passport.authenticate('basic', { session: false }), functio
     res.status(404).send('Sorry, we cannot find that!\n' + getHash(req.query.id + '0000'));
 });
 
-//そのうち
 //ユーザー情報を更新
 //RESTFulならPUT
 app.post('/user/update_userinfo', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
-    console.log('nickname:'     + req.body.nickname);
-    console.log('ust:'          + req.body.ust);
-    console.log('jtv:'          + req.body.jtv);
-    console.log('nicolive:'     + req.body.nicolive);
-    console.log('show:'         + req.body.show);
-    console.log('web:'          + req.body.web);
-    console.log('description:'  + req.body.description);
-    console.log('popup:'        + req.body.popup);
-    console.log('speed:'        + req.body.speed);
-    console.log('twitter:'      + req.body.twitter);
+    cInfo(req, req.user.userid);
 
-/*
-    var _User = new UserInfo();
-    _User.userid   = "botuser";
-    _User.nickname = "botuser";
-    _User.password = getHash("botuser");
-    _User.email    = "botuser@example.com";
-*/
+    //パスワード変更判定
+    var passwd = '';
+    if (req.body.password){
+        passwd = getHash(req.body.password);
+    } else {
+        passwd = req.user.password;
+    }
 
-//    _User.save();
-
-    var d={};
-    d.result = 0;
-    res.set('Content-Type', 'text/javascript; charset=utf-8');
-    res.send('(' + JSON.stringify(d) + ')'); 
+    //ユーザデータ更新処理
+    UserInfo.update(
+        {userid : req.user.userid},
+        {$set : { password    : passwd,
+                  nickname    : req.body.nickname,
+                  ust         : req.body.ust,
+                  jtv         : req.body.jtv,
+                  nicolive    : req.body.nicolive,
+                  show        : req.body.show,
+                  web         : req.body.web,
+                  description : req.body.description,
+                  popup       : req.body.popup,
+                  speed       : req.body.speed,
+                  twitter     : req.body.twitter
+                }
+        },
+        {upsert : false, multi : false },
+         function(err, results) {
+            var d={};
+            if (err) {
+                d.result = 0;
+                d.errmsg = err;
+            } else {
+                d.result = 1;
+            }
+            res.set('Content-Type', 'text/javascript; charset=utf-8');
+            res.send('(' + JSON.stringify(d) + ')'); 
+        }
+    );
 });
 
 //そのうち
@@ -340,7 +411,7 @@ app.get('user/getuserinfo', function(req, res){
                     d.result = 0;
                 } else {
                     d.result       = 1;
-                    d.name         = result.nickname    ;// todo nullと文字化け対策
+                    d.name         = result.nickname    ;
                     d.ust          = result.ust         ;
                     d.channel_id   = result.nicolive    ;
                     d.chat_channel = ""                 ;
@@ -367,9 +438,9 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
 
     var locinfo = new LocInfo();
     locinfo.valid          = true;
-    locinfo.time           = req.body.time;     //日付がUTCで入る
+    locinfo.time           = req.body.time;
     locinfo.user           = req.user.userid;
-    locinfo.nickname       = req.user.nickname; //todo 文字化け対策
+    locinfo.nickname       = req.user.nickname;
     locinfo.lat            = req.body.lat;
     locinfo.lon            = req.body.lon;
     locinfo.dir            = req.body.gpsd;
@@ -410,7 +481,6 @@ app.get('/api/user_list', function(req, res){
                 d.errmsg = 'api/user_list is error.';
                 console.log(err);
             } else {
-                //もうちょっといいやり方探す
                 for (var i = 0; i < result.length; i++) {
                     list.push(result[i]['_id']);
                 }

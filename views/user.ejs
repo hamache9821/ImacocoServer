@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+    <head>
+        <title>今ココなう！(仮):ユーザーページ</title>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <link rel="stylesheet" type="text/css" href="/static/subModal.css" />
+        <script type="text/javascript" src="/static/common.js"></script>
+        <script type="text/javascript" src="/static/subModal.js"></script>
+        <script type="text/javascript" src="/static/user.js"></script>
+        <link rel="stylesheet" type="text/css" href="/css/simple.css">
+    </head>
+    <body>
+    <div id="Header">
+        <h1 id="headerTitle">今ココなう！(仮)：ユーザー情報</h1>
+    </div>
+    <div id="Content">
+        <h2>基本情報</h2>
+        <form>
+            <table class="dlDesc">
+                <tr>
+                    <th>ID</th>
+                    <td><%= userid %></td>
+                </tr>
+                <tr>
+                    <th>パスワード<br />パスワードを変更したい方は入力してください</th>
+                    <td><input type="password" id="password" size="20"></td>
+                </tr>
+                <tr>
+                    <th>パスワード(確認)</th>
+                    <td><input type="password" id="password2" size="20"></td>
+                </tr>
+                <tr>
+                    <th>ニックネーム<br/>地図上に表示される名前です</th>
+                    <td><input id="nickname" value="<%= nickname %>" size="20" /></td>
+                </tr>
+                <tr>
+                    <th>TwitterID</th>
+                    <td><input id="twitter" value="<%= twitter %>" size="20" /></td>
+                </tr>
+                <tr>
+                    <th>USTREAM.tv channel<br>http://www.ustream.tv/channel/の後の部分です<br>
+                        USTREAM.tvのLIVEアイコン(<img src="/img/ustream.png">)を出したい人は登録してください</th>
+                    <td><input id="ust" value="<%= ust %>" size="20" /></td>
+                </tr>
+                <tr>
+                    <th>Justin.tv channel<br>http://www.justin.tv/の後の部分です<br>
+                        Justin.tvのLIVEアイコン(<img src="/img/justin.png">)を出したい人は登録してください</th>
+                    <td><input id="jtv" value="<%= jtv %>" size="20" /></td>
+                </tr>
+                <tr>
+                    <th>ニコニコ動画ID<br>ニコニコ動画の<a href="http://www.nicovideo.jp/my/">マイページ</a>に表示されているIDの数字です。<br/><font color="red">コミュニティ番号(<b>co</b>xxxxx)ではありません！</font><br>ニコニコ生放送のLIVEアイコン(<img src="/img/nicolive.png">)を出したい人は登録してください</th>
+                    <td><input id="nicolive" value="<%= nicolive %>" size="20" /></td>
+                </tr>
+                <tr>
+                    <th>WebURL</th><td><input id="web" value="<%= web %>" size="40" /></td>
+                </tr>
+                <tr>
+                    <th>自己紹介</th><td><textarea id="description" rows="5" cols="40"><%= description %></textarea></td>
+                </tr>
+                <tr>
+                    <td colspan="2"><input type="checkbox" id="show" checked="<%= show %>" /><a href="/static/view.html">全体地図ページ</a>で公開する(APIでは常に公開です)</td>
+                </tr>
+                <tr>
+                    <td colspan="2"><input type="checkbox" id="speed" checked="<%= speed %>"/>APIで速度を公開する</td>
+                </tr>
+                <tr>
+                    <th>地図のふきだし</th>
+                    <td><textarea id="popup" rows="5" cols="40"><%= popup %></textarea></td>
+                </tr>
+            </table>
+            <input type="button" value="変更" onClick="javascript:updateUserInfo();" />
+        </form>
+        <p>
+        <br>地図のふきだしで使用可能なテンプレート変数：
+        <table class="dlDesc">
+            <tr>
+                <th>%user%</th><td>アカウント名</td>
+            </tr>
+            <tr>
+                 <th>%plottime%</th><td>表示時刻</td>
+            </tr>
+            <tr>
+                 <th>%latitude%</th><td>緯度</td>
+            </tr>
+            <tr>
+                 <th>%longitude%</th><td>経度</td>
+            </tr>
+            <tr>
+                 <th>%direction%</th><td>方位(北を0として時計回りに360度)</td>
+            </tr>
+            <tr>
+                 <th>%altitude%</th><td>高度(m)</td>
+            </tr>
+            <tr>
+                 <th>%velocity%</th><td>速度(km/h)</td>
+            </tr>
+            <tr>
+                 <th>\n</th><td>改行(&lt;br&gt;タグ)</td>
+            </tr>
+            <tr>
+                 <th>%hr%</th><td>&lt;hr&gt;タグ</td>
+            </tr>
+            <tr>
+                 <th>%profile%</th><td>ユーザープロフィールへのリンク</td>
+            </tr>
+            <tr>
+                 <th>%userweb%</th><td>ユーザーのHomePage</td>
+            </tr>
+            <tr>
+                 <th>%twitter%</th><td>Twitterアカウントへのリンク</td>
+            </tr>
+            <tr>
+                 <th>%ustream%</th><td>USTREAM配信ページへのリンク</td>
+            </tr>
+            <tr>
+                 <th>%justin%</th><td>Justin.tv配信ページへのリンク</td>
+            </tr>
+            <tr>
+                 <th>%nicolive%</th><td>自分が放送中のニコニコ生放送の番組へのリンク</td>
+            </tr>
+        </table>
+
+
+        <p class="morep">
+        <!--h2>グループ</h2>
+        <span class="hide" id="groupid" ></span>
+        <table class="dlDesc">
+        <tr>
+        <th>グループ名</th><th>説明</th><th>グループオーナー</th><th>編集</th><th>削除</th>
+        </tr>
+
+        <tr>
+        <td>mitsugobot</td>
+        <td>さまざまなスポットにマーカーを置いてあります。自由に追加してＯＫです！</td>
+        <td>mitsugogo</td>
+        <td>編集不可</td>
+        <td>削除不可</td>
+        </tr>
+
+        <tr>
+        <td>kokudou</td>
+        <td>酷道・険道のスポット集です。URLをhttps～にすると誰でも編集できます。道路上のスポットについては路線番号(○○号線)を最初に書くようにお願いします。</td>
+        <td>mitsugogo</td>
+        <td>編集不可</td>
+        <td>削除不可</td>
+        </tr>
+
+        </table>
+        <button onClick="showPopWin('/static/create_group.html', 600, 180, function(returnVal) { location.reload(); } );">新規作成</button --!>
+
+        <!--
+        <p>
+        <h2>GPSデータ</h2>
+        <table class="dlDesc">
+        <tr>
+        <th>公開</th><th>ID</th><th>GPX</th><th>軌跡</th><th>削除</th>
+        </tr>
+
+        </table>
+
+        <input type="button" onClick="javascript:deleteAll();" value="全削除">
+        -->
+
+    </div>
+    <div id="Footer">
+    <a href="/">Topへ戻る</a>
+    </div>
+    </body>
+</html>
