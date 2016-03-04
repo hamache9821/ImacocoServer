@@ -31,7 +31,12 @@ $ node app.js
 ※googleMap API Key等は各自で用意してください。  
 
 現時点で実装しているAPI
+<<<<<<< HEAD
 * home/*
+=======
+* user
+* user/update_userinfo
+>>>>>>> 69e5f22d4c740a3c527ce4e2444bfdc3fefb6020
 * user/getuserinfo
 * api/post
 * api/user_list
