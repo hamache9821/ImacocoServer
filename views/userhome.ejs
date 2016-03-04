@@ -1,0 +1,36 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+    <head>
+        <title>今ココなう！(仮)：<%= username %></title>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <link rel="stylesheet" type="text/css" href="/css/simple.css">
+    </head>
+    <body>
+        <div id="Header">
+            <h1 id="headerTitle">今ココなう！(仮)：<%= username %></h1>
+        </div>
+        <div id="Content">
+            <table class="dlDesc">
+                <tr>
+                    <th>ID</th><td><%= userid %></td>
+                </tr>
+                <tr>
+                    <th>ニックネーム</th><td><%= nickname %><img src="/img/user/<%= userid %>.png"></td>
+                </tr>
+                <tr>
+                    <th>Web</th><td><a href="<%= web %>"><%= web %></a></td>
+                </tr>
+                <tr>
+                    <th>twitter</th><td><a href="http://twitter.com/<%= twitter %>"><%= twitter %></a></td>
+                </tr>
+                <tr>
+                    <th>自己紹介</th><td><%= description %></td>
+                </tr>
+            </table>
+        </div>
+        <div id="Footer">
+        <a href="/">Topへ戻る</a>
+        </div>
+    </body>
+</html>

@@ -12,38 +12,24 @@
 //todo log4jsあたり検討
 //todo 括り文字の使い分け ex node:'' mongo:""
 
-
 //サーバー設定
 var port = process.env.PORT || 80;
-var hashSecretKey = 'some_random_secret';   // シークレットは適当に変えてください
+var dbHost = 'localhost';
+var dbName = 'ImacocoDB';
 
-//console.log用定数
-var black   = '\u001b[30m';
-var red     = '\u001b[31m';
-var green   = '\u001b[32m';
-var yellow  = '\u001b[33m';
-var blue    = '\u001b[34m';
-var magenta = '\u001b[35m';
-var cyan    = '\u001b[36m';
-var white   = '\u001b[37m';
-var reset   = '\u001b[0m';
 
 //モジュール宣言
 require('date-utils');
+var util = require('./common-utils.js');
 var fs = require('fs');
 var http = require('http');
 var express = require('express');
 var domain = require('express-domain-middleware');
 var bodyParser = require('body-parser');
-var cookieParser = require('cookie-parser');
 var mongoose = require('mongoose');
-var crypto = require("crypto");
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
-
-
-//デバッグ用
-var utill = require('util');
+var Canvas = require('canvas')
 
 //Express関係
 var app = express();
@@ -53,57 +39,11 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(passport.initialize());
 app.use(passport.session());
 app.set('port', port);
-
-//var ejsEngine = require('ejs').someFunc;
-//app.engine('ejs', ejsEngine);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
-//todo このへんのはそのうちモジュール化したい
-//パスワードをハッシュ化するやつ
-var getHash = function(target)
-    {var sha = crypto.createHmac('sha256', hashSecretKey);
-     sha.update(target);
-     return sha.digest('hex');
-    };
-
-//アクセス表示
-var cInfo = function(req, msg)
-    {
-        var s = '';
-        if (msg === undefined){
-            msg = req.headers['x-forwarded-for'] + ' ' + req.headers['user-agent'];
-        }
-
-        //表示時間
-        var dt = new Date();
-        var formatted = dt.toFormat(" HH24:MI:SS ");
-
-        switch (req.method){
-            case 'GET':
-                s = '[' + green   + 'CALL' + reset + ']' + dt.toFormat(" HH24:MI:SS ") + req.url + ': ';
-                break;
-            case 'POST':
-                s = '[' + magenta + 'CALL' + reset + ']' + dt.toFormat(" HH24:MI:SS ") + req.url + ': ';
-                break;
-            default:
-                break;
-                s = '[' + yellow  + 'CALL' + reset + ']' + dt.toFormat(" HH24:MI:SS ") + req.url + ': ';
-        }
-
-        console.log(s + msg);
-        return;
-    };
-
-//時間計算関数
-var addMinutes = function(date, minutes)
-    {
-        return new Date(date.getTime() + minutes * 60000);
-    };
-
-
 //--------- MongoDB設定 -----------
-var db = mongoose.createConnection('mongodb://localhost/ImacocoDB', function(error, res){});
+var db = mongoose.createConnection('mongodb://' + dbHost + '/' + dbName, function(error, res){});
 
 //ユーザ認証モデル
 var UserSchema = new mongoose.Schema({
@@ -125,8 +65,8 @@ var UserSchema = new mongoose.Schema({
 //位置情報保持モデル
 var LocSchema = new mongoose.Schema({
     valid          : {type: Boolean, required: true},
-    time           : {type: Date, required: true},
-    user           : {type: String, required: true},
+    time           : {type: Date,    required: true},
+    user           : {type: String,  required: true},
     nickname       : {type: String},
     lat            : {type: Number},
     lon            : {type: Number},
@@ -166,10 +106,10 @@ passport.use(new BasicStrategy(
                   return done(err);
               }
               if (!user) {
-                  return done(null, false, {message: 'ユーザーが見つかりませんでした。'});
+                  return done(null, false, {message: 'invalid userid.'});
               }
-              if (user.password != getHash(password)) {
-                  return done(null, false, {message: 'パスワードが間違っています。'}); 
+              if (user.password != util.getHash(password)) {
+                  return done(null, false, {message: 'invalid passwords.'}); 
               }
               //todo password隠蔽化
               return done(null, user);
@@ -184,37 +124,95 @@ passport.use(new BasicStrategy(
 app.use(express.static('wui'));
 
 //そのうち
+//今ココリプレイ的なアレ
+app.get('/date/*', function(req, res){
+    util.setConsolelog(req);
+    res.status(404).send('Sorry, we cannot find that!');
+});
+
+//そのうち
+//今ココリプレイ的なアレ
+app.get('/api/json/*.json', function(req, res){
+    util.setConsolelog(req);
+    res.status(404).send('Sorry, we cannot find that!');
+/*
+    /api/latestの処理をベースに一日分抽出したらできそうだけど、負荷を考えないと
+
+    /
+    db.locinfos.distinct("user",
+        {time:{"$gte" : ISODate("2016-03-04T00:00:00Z"), "$lte" : ISODate("2016-03-04T23:59:59Z")}}
+    );
+
+    //その日のユーザー数*1440回のループとかちょっとアレ
+    db.locinfos.find(
+        {time:{"$gte" : ISODate("2016-02-24T01:49:00Z"), "$lte" : ISODate("2016-02-24T01:49:59Z")}},
+        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0}
+    ).sort({time: -1}).limit(1);
+*/
+
+});
+
+//そのうち
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     res.status(404).send('Sorry, we cannot find that!');
 });
 
 //そのうち
 //地図上で指定したユーザーの位置を表示するHTMLを出力
 app.get('/view', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     res.status(404).send('Sorry, we cannot find that!');
 });
 
 //そのうち
 //過去に記録したデータを地図上にプロット
+//リプレイ実装するならそれでいいんじゃないの説
 app.get('/view_data', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     res.status(404).send('Sorry, we cannot find that!');
 });
 
 //ユーザー情報を表示
 app.get('/home/*', function(req, res){
-    cInfo(req);
-    res.status(404).send('Sorry, we cannot find that!');
+    util.setConsolelog(req);
+    
+//    console.log();
+    var userid = req.url.split('/')[2];
+
+    if (userid === undefined) {
+        res.status(404).send('Sorry, we cannot find that!!');
+        return;
+    }
+
+    UserInfo.findOne(
+        {userid : userid},
+        function (err, result) {
+            if (err || result === null) {
+                res.status(404).send('Sorry, we cannot find that!');
+            } else {
+                var username = result.nickname + '(' + userid + ')';
+                
+                res.render('userhome',
+                           {userid      : userid,
+                            nickname    : result.nickname,
+                            username    : username,
+                            twitter     : result.twitter,
+                            web         : result.web,
+                            description : result.description
+                           }
+                          );
+            }
+        }
+    );
 });
 
 
 //そのうち
 //ユーザ作成
 app.get('/create_user', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
 
     res.render('create_user',
                {}
@@ -223,7 +221,7 @@ app.get('/create_user', function(req, res){
 
 //ユーザ作成
 app.post('/create_user', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
 
     console.log('nickname:'     + req.body.nickname);
     console.log('email:'          + req.body.email);
@@ -245,7 +243,7 @@ app.post('/create_user', function(req, res){
 //    _User.save();
 
 
-    console.log(utill.inspect(req.body));
+    util.inspect(req.body);
     
     res.status(404).send('Sorry, we cannot find that!');
 });
@@ -253,7 +251,7 @@ app.post('/create_user', function(req, res){
 //そのうち
 //パスワード変更受付
 app.post('/change_password_request', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     res.status(404).send('Sorry, we cannot find that!');
 });
 
@@ -263,7 +261,7 @@ app.post('/change_password_request', function(req, res){
 //優先度高め
 //ユーザー名のpng画像を返す
 app.get('/user/*.png', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log(req.url);
 
     fs.readFile('./wui/img' + req.url,
@@ -281,7 +279,7 @@ app.get('/user/*.png', function(req, res){
 
 //ユーザ情報の編集ページを表示
 app.get('/user', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
 
     UserInfo.findOne(
         {userid : req.user.userid},
@@ -311,22 +309,22 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
 //いつかやる
 //過去に保存したデータをGPXフォーマットでダウンロード
 app.get('/user/gpx', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('id:' + req.query.id);
 
     res.set('Content-Type', 'text/xml; charset=utf-8');
-    res.status(404).send('Sorry, we cannot find that!\n' + getHash(req.query.id + '0000'));
+    res.status(404).send('Sorry, we cannot find that!\n' + util.getHash(req.query.id + '0000'));
 });
 
 //ユーザー情報を更新
 //RESTFulならPUT
 app.post('/user/update_userinfo', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req, req.user.userid);
+    util.setConsolelog(req, req.user.userid);
 
     //パスワード変更判定
     var passwd = '';
     if (req.body.password){
-        passwd = getHash(req.body.password);
+        passwd = util.getHash(req.body.password);
     } else {
         passwd = req.user.password;
     }
@@ -366,7 +364,7 @@ app.post('/user/update_userinfo', passport.authenticate('basic', { session: fals
 //指定した過去データを削除
 //RESTFulならDELETE
 app.get('/user/delete_data', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('id:' + req.query.id);
 
     var d={};
@@ -379,7 +377,7 @@ app.get('/user/delete_data', passport.authenticate('basic', { session: false }),
 //指定した過去データの公開・非公開を設定
 //RESTFulならPUT
 app.get('/user/set_public', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('id:' + req.query.id);
     console.log('flag:' + req.query.flag);
 
@@ -391,7 +389,7 @@ app.get('/user/set_public', passport.authenticate('basic', { session: false }), 
 
 //指定したユーザーの情報を取得
 app.get('user/getuserinfo', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('user:' + req.query.user);
 
     if (req.query.user === undefined){
@@ -430,11 +428,9 @@ app.get('user/getuserinfo', function(req, res){
 });
 
 //--------- /api 座標関係 -----------
-
-//優先度高め
 //座標データを登録します
 app.post('/api/post', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req, req.user.userid);
+    util.setConsolelog(req, req.user.userid);
 
     var locinfo = new LocInfo();
     locinfo.valid          = true;
@@ -462,11 +458,11 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
 
 //現在のユーザー一覧を取得
 app.get('/api/user_list', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
 
     //直近5分以内にデータ送信のあったユーザをアクティブとする
     LocInfo.aggregate(
-        {$match : {time : {"$gte" : addMinutes(new Date, -5)}}},
+        {$match : {time : {"$gte" : util.addMinutes(new Date, -5)}}},
         {$group : {_id  : {valid : "$valid",
                            user  : "$user"
                           }
@@ -495,7 +491,7 @@ app.get('/api/user_list', function(req, res){
 
 //最新の位置情報を取得
 app.get('/api/latest', function(req, res){
-    cInfo(req, ' user:' + req.query.user);
+    util.setConsolelog(req, ' user:' + req.query.user);
 
     //ユーザ座標
     var points = [];
@@ -522,7 +518,7 @@ app.get('/api/latest', function(req, res){
     //現在オンラインのユーザー探す
     LocInfo.distinct(
         "user",
-        {$or : req_user, time:{"$gte" : addMinutes(new Date, -5)}},
+        {$or : req_user, time:{"$gte" : util.addMinutes(new Date, -5)}},
         function(err, result){
             //何かしらのエラー
             if (err) {
@@ -547,7 +543,7 @@ app.get('/api/latest', function(req, res){
             //オンラインユーザの直近の位置を取得
             for (var i = 0; i < result.length; i++) {
                 LocInfo.find(
-                    {user : result[i], time:{"$gte" : addMinutes(new Date, -5)}},
+                    {user : result[i], time:{"$gte" : util.addMinutes(new Date, -5)}},
                     {_id : 0, __v : 0, time : 0, flag : 0, saved : 0},
 
                     function(err, results){
@@ -575,7 +571,7 @@ app.get('/api/latest', function(req, res){
 //やらない
 //逆ジオコード変換
 app.get('/api/getaddress', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('lat:' + req.query.lat);
     console.log('lon:' + req.query.lon);
 
@@ -588,7 +584,7 @@ app.get('/api/getaddress', passport.authenticate('basic', { session: false }), f
 //優先度高め
 //指定したユーザーの情報を取得
 app.get('/api/getuserinfo', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('user:' + req.query.user);
 
     if (req.query.user === undefined){
@@ -629,8 +625,12 @@ app.get('/api/getuserinfo', function(req, res){
 //そのうち
 //グループ情報を取得
 app.get('/api/getgroupinfo', function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('group:' + req.query.group);
+
+    console.log(util.addMinutes(new Date(),-1));
+    util.inspect(util.getHash("hoge"));
+    
 
     var d={};
     d.result       = 0;
@@ -645,7 +645,7 @@ app.get('/api/getgroupinfo', function(req, res){
 //そのうち
 //グループを作成
 app.post('/api/creategroup', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('group:' + req.body.group);
     console.log('desc:' + req.body.desc);
 
@@ -661,7 +661,7 @@ app.post('/api/creategroup', passport.authenticate('basic', { session: false }),
 //グループ情報を更新
 //RESTFulならPUT
 app.post('/api/updategroup', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('group:' + req.body.group);
     console.log('desc:' + req.body.desc);
     console.log('users:' + req.body.users);
@@ -678,7 +678,7 @@ app.post('/api/updategroup', passport.authenticate('basic', { session: false }),
 //グループ情報を削除
 //RESTFulならDELETE
 app.get('/api/deletegroup', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('group:' + req.query.group);
 
     var d={};
@@ -692,7 +692,7 @@ app.get('/api/deletegroup', passport.authenticate('basic', { session: false }), 
 //そのうち
 //グループ共有マーカーを追加
 app.post('/api/addmarker', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('group:' + req.body.group);
     console.log('desc:' + req.body.desc);
     console.log('lat:' + req.body.lat);
@@ -711,7 +711,7 @@ app.post('/api/addmarker', passport.authenticate('basic', { session: false }), f
 //グループ共有マーカーを削除
 //RESTFulならDELETE
 app.get('/api/deletemarker', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
+    util.setConsolelog(req);
     console.log('group:' + req.query.group);
     console.log('key:' + req.query.key);
 
@@ -727,8 +727,8 @@ app.get('/api/deletemarker', passport.authenticate('basic', { session: false }),
 //直近の座標を削除？
 //RESTFulならDELETE
 app.get('/api/delpost', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req);
-    console.log(utill.inspect(req.body));
+    util.setConsolelog(req);
+    util.inspect(req.body);
     
     //指定した時間-5分くらいのユーザデータを消す？
     
@@ -737,7 +737,7 @@ app.get('/api/delpost', passport.authenticate('basic', { session: false }), func
 
 //ログインテスト
 app.get('/api/logintest', passport.authenticate('basic', { session: false }), function(req, res){
-    cInfo(req, req.user.userid + ":" + req.user.password);
+    util.setConsolelog(req, req.user.userid + ":" + req.user.password);
     
     //ユーザー登録APIを作るまでの暫定対応
     //todo 本家鯖からユーザー名のpng画像を取得する
@@ -745,7 +745,71 @@ app.get('/api/logintest', passport.authenticate('basic', { session: false }), fu
     res.send('OK');
 });
 
+//テスト用
+app.get('/api/test.png',  function(req, res){
+    util.setConsolelog(req, req.query.userid);
+    //http://qiita.com/EafT/items/d5afef65081b7fdf60cc
+
+    if(!req.query.userid){
+        res.status(404).send('invalid requests!');
+        return;
+    }
+    var font = '30px Impact';
+
+    var canvas = new Canvas(10, 20);
+//    var Image = Canvas.Image;
+    var ctx = canvas.getContext('2d');
+    ctx.font = font;
+    var te = ctx.measureText(req.query.userid);
+    utill.inspect(te);
+
+    canvas = new Canvas(te.width, te.emHeightAscent + te.actualBoundingBoxDescent);
+    ctx = canvas.getContext('2d');
+    ctx.font = font;
+//    ctx.rotate(.1);
+    ctx.fillStyle = 'rgba(128, 100, 162,1)';
+
+    ctx.fillText(req.query.userid, 0, 0);
+
+//    var te = ctx.measureText(req.query.userid);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.lineTo(0, 102);
+    ctx.lineTo(0 + te.width, 102);
+    ctx.stroke();
+
+    utill.inspect(te);
+
+//    console.log('<img src="' + canvas.toDataURL() + '" />');
+//    var imagedata;
+console.log("1");
+
+    //http://www.html5.jp/canvas/how3.html
+    var filename = "/tmp/" + req.query.userid + ".png" ;
+    var buffer = new Buffer(canvas.toDataURL().split(',')[1], 'base64');
+    fs.writeFile(filename, buffer, function(){
+        console.log("saved to " + filename);
+    });
+
+    fs.readFile(filename,
+                function(err, data){
+                    if (err) {
+                        //なければ本家から取得する
+                        res.status(404).send('Sorry, we cannot find that!');
+                    } else {
+                        res.send(data, { 'Content-Type': 'image/png' }, 200);
+                    }
+                }
+               );
+
+
+//    res.send('OK');
+});
+
+
 //サーバー起動
 http.createServer(app).listen(app.get('port'), function(){
-  console.log('['+ cyan +'INFO' + reset + '] ImacocoNow server listening on port: ' + app.get('port'));
+  console.log('[INFO] ImacocoNow server listening on port: ' + app.get('port'));
+//  console.log('['+ cyan +'INFO' + reset + '] ImacocoNow server listening on port: ' + app.get('port'));
+
 });

@@ -11,9 +11,9 @@
     "express-domain-middleware": "*",
     "passport": "*",
     "passport-http": "*",
-    "cookie-parser": "*",
     "date-utils": "*",
     "ejs": "*",
+    "canvas": "*",
     "mongoose": "*"
   }
 }

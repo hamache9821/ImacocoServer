@@ -47,7 +47,6 @@ var plot_icon;
 var group_revision = '';
 var traceuser = '';
 var prev_trace = '';
-var username_file_site = ''; //'http://www.fujita-lab.com/imakoko';
 
 var icon_image_value = 11;
 var initializeFlag = true;
@@ -779,7 +778,7 @@ function createClickableMarker(pt, username) {
 						}
 						users[username].jtv = res.jtv;
 						users[username].ust = res.ust;
-						txt = txt.replace('%profile%', res.url ? '<a target="_blank" href="http://imakoko-gps.appspot.com/home/' + username + '">profile</a>' : '');
+						txt = txt.replace('%profile%', res.url ? '<a target="_blank" href="/home/' + username + '">profile</a>' : '');
 						txt = txt.replace('%userweb%', res.url ? '<a target="_blank" href="' + res.url + '">HomePage</a>' : '');
 						txt = txt.replace('%twitter%', res.twitter ? '<a target="_blank" href="http://twitter.com/' + res.twitter + '">' + res.twitter + ' on Twitter</a>' : '');
 						txt = txt.replace('%ustream%', res.ust ? '<a target="_blank" href="http://www.ustream.tv/channel/' + res.ust + '">' + res.ust + ' on USTREAM</a>' : '');
