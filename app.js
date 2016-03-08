@@ -135,8 +135,20 @@ app.get('/date/*', function(req, res){
 app.get('/api/json/*.json', function(req, res){
     util.setConsolelog(req);
     res.status(404).send('Sorry, we cannot find that!');
+
+    var day =req.url.split('/')[3].replace('.json','');
+    //http://momentjs.com/timezone/
+    //http://qiita.com/masato/items/32464b45c78962cb5831
+    
+    
+    util.inspect(day);
+
+    var gt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2),  0,  0,  0,0);
+    var lt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2), 23, 59, 59,0);
+
 /*
     /api/latestの処理をベースに一日分抽出したらできそうだけど、負荷を考えないと
+    //リアルタイム集計はさすがに負荷が高すぎるので、バッチ処理で専用テーブル持ったほうがよさげ
 
     /
     db.locinfos.distinct("user",
@@ -149,6 +161,78 @@ app.get('/api/json/*.json', function(req, res){
         {_id : 0, __v : 0, time : 0, flag : 0, saved : 0}
     ).sort({time: -1}).limit(1);
 */
+/*
+    //ユーザ座標
+    var points = [];
+    var day_points = [];
+
+    //現在オンラインのユーザー探す
+    LocInfo.distinct(
+        "user",
+        {time:{"$gte" : gt_date, "$lte" : lt_date}},
+        function(err, result){
+            //何かしらのエラー
+            if (err) {
+                var d    = {};
+                d.result = 0;
+                d.errmsg = 'api/json is error.(distinct)';
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')'); 
+                return;
+            }
+            //該当ユーザなし
+            if (result.length === 0) {
+                var d    = {};
+                d.result = 1;
+                d.points = points;
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')');
+                return;
+            }
+
+            for (var x = 0; x < 1440; x++) {
+//util.inspect(x);
+
+                //オンラインユーザの直近の位置を取得
+                for (var i = 0; i < result.length; i++) {
+//                    console.log(x + ':' + result[i] );
+
+                    LocInfo.find(
+                        {user : result[i], time:{"$gt" : util.addMinutes(gt_date, x), "$lt" : util.addMinutes(gt_date, x + 1)}},
+                        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0},
+
+                        function(err, results){
+                            if (results[0] != undefined){
+                                points.push(results[0]);
+//                                util.inspect(results[0]);
+                            }
+                            if (points.length >= result.length){
+
+                                var d={};
+                                d.result = 1;
+                                d.points = points;
+                                
+                                day_points.push(d);
+//                                util.inspect(day_points);
+
+                              //  res.set('Content-Type', 'text/javascript; charset=utf-8');
+                              //  res.send('(' + JSON.stringify(d) + ')');
+                           }
+                           
+                        }
+                    ).sort({time: -1}).limit(1);
+                    
+
+
+                }
+            // util.inspect(day_points);
+             
+            }
+            res.set('Content-Type', 'text/javascript; charset=utf-8');
+            res.send('(' + JSON.stringify(day_points) + ')');
+        }
+    );
+*/
 
 });
 
@@ -156,14 +240,101 @@ app.get('/api/json/*.json', function(req, res){
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
     util.setConsolelog(req);
-    res.status(404).send('Sorry, we cannot find that!');
+    res.redirect(301, '/view');
 });
 
 //そのうち
 //地図上で指定したユーザーの位置を表示するHTMLを出力
 app.get('/view', function(req, res){
     util.setConsolelog(req);
-    res.status(404).send('Sorry, we cannot find that!');
+
+    //http://proxy2.imacoconow.com/
+
+    var region =[];
+    var title = '';
+
+    //追跡ユーザ
+    if (req.query.trace === undefined){
+        req.query.trace = '__nouser__';
+    }
+
+    //表示ユーザ
+    switch (req.query.user){
+        case undefined:
+        case 'all':
+        case '':
+        console.log('1');
+            var tmp = [];
+            tmp.push("all");
+            req.query.user = tmp;
+            break;
+        default:
+            var tmp = [];
+            var ls = req.query.user.split(',');
+            
+            for (var i = 0; i < ls.length; i++) {
+                tmp.push(ls[i]);
+            }
+            req.query.user = tmp;
+    }
+
+    //表示エリア
+    switch (req.query.region){
+        case 'hokkaido':
+            title = '：地図モード（北海道）';
+            region.push({'lat':45.383019, 'lon':144.920654 });
+            region.push({'lat':41.47566,  'lon':139.75708 });
+            break;
+        case 'tohoku':
+            title = '：地図モード（東北）';
+            region.push({'lat':40.934265, 'lon':142.058716 });
+            region.push({'lat':38.565348, 'lon':139.334106 });
+            break;
+        case 'tokyo':
+            title = '：地図モード（関東）';
+            region.push({'lat':35.951329861522666, 'lon':139.01275634765625 });
+            region.push({'lat':35.26580442886754,  'lon':140.25283813476562 });
+            region.push({'lat':35.266925688950074, 'lon':139.04983520507812 });
+            region.push({'lat':35.968003617226884, 'lon':140.21575927734375 });
+            break;
+        case 'hokuriku':
+            title = '：地図モード（北陸）';
+            region.push({'lat':35.469618, 'lon':135.362549 });
+            region.push({'lat':37.905199, 'lon':139.042969 });
+            break;
+        case 'nagoya':
+            title = '：地図モード（中京）';
+            region.push({'lat':35.64836915737426,  'lon':136.2249755859375 });
+            region.push({'lat':34.279914398549934, 'lon':138.1805419921875 });
+            break;
+        case 'osaka':
+            title = '：地図モード（関西）';
+            region.push({'lat':35.64836915737426, 'lon':136.2249755859375 });
+            region.push({'lat':33.8339199536547,  'lon':134.1485595703125 });
+            break;
+        case 'kyusyu':
+            title = '：地図モード（九州）';
+            region.push({'lat':33.92513,  'lon':131.973267 });
+            region.push({'lat':31.071756, 'lon':129.578247 });
+            break;
+        case undefined:
+        case 'japan':
+        default:
+            title = '：地図モード（全国）';
+            region.push({'lat':25.99755, 'lon':126.738281 });
+            region.push({'lat':45.521744, 'lon':145.283203 });
+            break;
+    }
+
+    res.render('index',
+               {title       : title,
+                user        : JSON.stringify(req.query.user),
+                trace_user  : req.query.trace,
+                region      : JSON.stringify(region),
+                sensor      : false,
+                map_style   : ''
+               }
+              );
 });
 
 //そのうち
@@ -177,8 +348,6 @@ app.get('/view_data', function(req, res){
 //ユーザー情報を表示
 app.get('/home/*', function(req, res){
     util.setConsolelog(req);
-    
-//    console.log();
     var userid = req.url.split('/')[2];
 
     if (userid === undefined) {
