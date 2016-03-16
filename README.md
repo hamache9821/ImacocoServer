@@ -14,8 +14,26 @@
 * ストレージを積めるだけ  
 > 1ユーザが8,640Post/Day(10秒に一回で24時間)データを送信した場合に、約1.3MBのストレージが必要です。
 
-### 使い方
+###環境構築方法(Debianの場合・他は知らない)  
+* nvmとNode.jsをインストール
+``` sh
+$ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | sh
+$ . ./.bashrc
+$ nvm install 5.6.0
+```  
+* [MongoDB](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-debian/)をインストール  
+``` sh
+$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+$ echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+$ sudo apt-get update
+$ sudo apt-get install -y mongodb-org
+```
+* node-canvas用
+```sh
+apt-get install libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-essential g++
+```
 
+### 使い方
 こんな感じで動くようにする予定
 
 ```sh
@@ -24,19 +42,18 @@ $ cd ImacocoServer
 $ npm install
 $ node app.js
 ```
+（適当にサービスとして登録するためのスクリプトがあったほうがいいかもしれない）  
 
 ### APIの実装状況
 基本的には[今ココなう！(β):API](http://www.fujita-lab.com/imakoko/api.html "今ココなう！(β):API")の仕様を踏襲していますので、  
 各クライアントツールとproxyの接続先サーバを自前のものに変えるだけで動きます。素敵！  
 ※googleMap API Key等は各自で用意してください。  
 
-現時点で実装しているAPI
-<<<<<<< HEAD
-* home/*
-=======
+現時点で実装しているAPI  
+* home/
+* view
 * user
 * user/update_userinfo
->>>>>>> 69e5f22d4c740a3c527ce4e2444bfdc3fefb6020
 * user/getuserinfo
 * api/post
 * api/user_list
@@ -60,24 +77,6 @@ ust : "", jtv : "", nicolive : "", show : "1", web : "http://example.com", descr
 MIT
 
 なので、商用利用したいとか、こういう機能が欲しいとかは勝手にforkしてやればいいと思うよ。
-
-###環境構築方法(Debianの場合・他は知らない)  
-* nvmとNode.jsをインストール
-``` sh
-$ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | sh
-$ nvm install 5.6.0
-```  
-* [MongoDB](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-debian/)をインストール  
-``` sh
-$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
-$ echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
-$ sudo apt-get update
-$ sudo apt-get install -y mongodb-org
-```
-* node-canvas用
-```sh
-apt-get install libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-essential g++
-```
 
 ###その他
  Q.インストール方法教えて！
