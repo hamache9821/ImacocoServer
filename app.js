@@ -29,7 +29,6 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
-var Canvas = require('canvas')
 
 //Express関係
 var app = express();
@@ -236,14 +235,12 @@ app.get('/api/json/*.json', function(req, res){
 
 });
 
-//そのうち
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
     util.setConsolelog(req);
     res.redirect(301, '/view');
 });
 
-//そのうち
 //地図上で指定したユーザーの位置を表示するHTMLを出力
 app.get('/view', function(req, res){
     util.setConsolelog(req);
@@ -326,13 +323,24 @@ app.get('/view', function(req, res){
             break;
     }
 
+    //現在位置
+    if (req.query.sensor === undefined){
+        req.query.sensor = false;
+    }
+
+    if (req.query.mapstyle === undefined){
+        req.query.mapstyle = '';
+    }
+
+
+    //todo　センサとマップタイプ
     res.render('index',
                {title       : title,
                 user        : JSON.stringify(req.query.user),
                 trace_user  : req.query.trace,
                 region      : JSON.stringify(region),
-                sensor      : false,
-                map_style   : ''
+                sensor      : Boolean(req.query.sensor),
+                map_style   : req.query.mapstyle
                }
               );
 });
@@ -362,7 +370,7 @@ app.get('/home/*', function(req, res){
                 res.status(404).send('Sorry, we cannot find that!');
             } else {
                 var username = result.nickname + '(' + userid + ')';
-                
+
                 res.render('userhome',
                            {userid      : userid,
                             nickname    : result.nickname,
@@ -424,10 +432,7 @@ app.post('/change_password_request', function(req, res){
     res.status(404).send('Sorry, we cannot find that!');
 });
 
-
 //--------- /user -----------
-
-//優先度高め
 //ユーザー名のpng画像を返す
 app.get('/user/*.png', function(req, res){
     util.setConsolelog(req);
@@ -436,7 +441,7 @@ app.get('/user/*.png', function(req, res){
     fs.readFile('./wui/img' + req.url,
                 function(err, data){
                     if (err) {
-                        //todo なければ本家から取得する
+                        //todo なければ生成を試みる？
                         res.status(404).send('Sorry, we cannot find that!');
                     } else {
                         res.send(data, { 'Content-Type': 'image/png' }, 200);
@@ -523,6 +528,10 @@ app.post('/user/update_userinfo', passport.authenticate('basic', { session: fals
             } else {
                 d.result = 1;
             }
+
+            //nickname画像生成
+            var filename = util.getUserNameImg(req.user.userid, req.body.nickname);
+
             res.set('Content-Type', 'text/javascript; charset=utf-8');
             res.send('(' + JSON.stringify(d) + ')'); 
         }
@@ -662,6 +671,8 @@ app.get('/api/user_list', function(req, res){
 app.get('/api/latest', function(req, res){
     util.setConsolelog(req, ' user:' + req.query.user);
 
+    //https://www.npmjs.com/package/litecache
+
     //ユーザ座標
     var points = [];
     var req_user =[];
@@ -750,7 +761,6 @@ app.get('/api/getaddress', passport.authenticate('basic', { session: false }), f
 
 //--------- -----------
 
-//優先度高め
 //指定したユーザーの情報を取得
 app.get('/api/getuserinfo', function(req, res){
     util.setConsolelog(req);
@@ -773,7 +783,7 @@ app.get('/api/getuserinfo', function(req, res){
                     d.result = 0;
                 } else {
                     d.result       = 1;
-                    d.name         = result.nickname    ;//todo nullと文字化け対策
+                    d.name         = result.nickname    ;
                     d.ust          = result.ust         ;
                     d.channel_id   = result.nicolive    ;
                     d.chat_channel = ""                 ;
@@ -892,13 +902,13 @@ app.get('/api/deletemarker', passport.authenticate('basic', { session: false }),
     res.send('(' + JSON.stringify(d) + ')'); 
 });
 
-//仕様調べる
 //直近の座標を削除？
 //RESTFulならDELETE
 app.get('/api/delpost', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req);
     util.inspect(req.body);
-    
+
+    //本家はsession-idみたいなのがあったらしい
     //指定した時間-5分くらいのユーザデータを消す？
     
     res.send('OK');
@@ -907,74 +917,8 @@ app.get('/api/delpost', passport.authenticate('basic', { session: false }), func
 //ログインテスト
 app.get('/api/logintest', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req, req.user.userid + ":" + req.user.password);
-    
-    //ユーザー登録APIを作るまでの暫定対応
-    //todo 本家鯖からユーザー名のpng画像を取得する
-
     res.send('OK');
 });
-
-//テスト用
-app.get('/api/test.png',  function(req, res){
-    util.setConsolelog(req, req.query.userid);
-    //http://qiita.com/EafT/items/d5afef65081b7fdf60cc
-
-    if(!req.query.userid){
-        res.status(404).send('invalid requests!');
-        return;
-    }
-    var font = '30px Impact';
-
-    var canvas = new Canvas(10, 20);
-//    var Image = Canvas.Image;
-    var ctx = canvas.getContext('2d');
-    ctx.font = font;
-    var te = ctx.measureText(req.query.userid);
-    utill.inspect(te);
-
-    canvas = new Canvas(te.width, te.emHeightAscent + te.actualBoundingBoxDescent);
-    ctx = canvas.getContext('2d');
-    ctx.font = font;
-//    ctx.rotate(.1);
-    ctx.fillStyle = 'rgba(128, 100, 162,1)';
-
-    ctx.fillText(req.query.userid, 0, 0);
-
-//    var te = ctx.measureText(req.query.userid);
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.beginPath();
-    ctx.lineTo(0, 102);
-    ctx.lineTo(0 + te.width, 102);
-    ctx.stroke();
-
-    utill.inspect(te);
-
-//    console.log('<img src="' + canvas.toDataURL() + '" />');
-//    var imagedata;
-console.log("1");
-
-    //http://www.html5.jp/canvas/how3.html
-    var filename = "/tmp/" + req.query.userid + ".png" ;
-    var buffer = new Buffer(canvas.toDataURL().split(',')[1], 'base64');
-    fs.writeFile(filename, buffer, function(){
-        console.log("saved to " + filename);
-    });
-
-    fs.readFile(filename,
-                function(err, data){
-                    if (err) {
-                        //なければ本家から取得する
-                        res.status(404).send('Sorry, we cannot find that!');
-                    } else {
-                        res.send(data, { 'Content-Type': 'image/png' }, 200);
-                    }
-                }
-               );
-
-
-//    res.send('OK');
-});
-
 
 //サーバー起動
 http.createServer(app).listen(app.get('port'), function(){
