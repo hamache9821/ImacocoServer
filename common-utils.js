@@ -1,6 +1,6 @@
 /***********************************************************
- *  ¡ƒRƒR‚È‚¤IƒNƒ‰ƒCƒAƒ“ƒgŒü‚¯ŒİŠ·ƒT[ƒoƒXƒNƒŠƒvƒg       *
- *  ‹¤’Êƒ‰ƒCƒuƒ‰ƒŠ                                         *
+ *  ä»Šã‚³ã‚³ãªã†ï¼ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆå‘ã‘äº’æ›ã‚µãƒ¼ãƒã‚¹ã‚¯ãƒªãƒ—ãƒˆ       *
+ *  å…±é€šãƒ©ã‚¤ãƒ–ãƒ©ãƒª                                         *
  *  Copyright (c) 2016 @Hamache9821                        *
  *  Released under the MIT license                         *
  *  http://opensource.org/licenses/mit-license.php         *
@@ -8,10 +8,14 @@
 module.exports = (function(){
     "use strict";
 
-    // ƒV[ƒNƒŒƒbƒg‚Í“K“–‚É•Ï‚¦‚Ä‚­‚¾‚³‚¢
+    var http = require('http');
+    var fs = require('fs');
+    var Canvas = require('canvas')
+
+    // ã‚·ãƒ¼ã‚¯ãƒ¬ãƒƒãƒˆã¯é©å½“ã«å¤‰ãˆã¦ãã ã•ã„
     var hashSecretKey = 'some_random_secret';
 
-    //console.log—p’è”
+    //console.logç”¨å®šæ•°
     var black   = '\u001b[30m';
     var red     = '\u001b[31m';
     var green   = '\u001b[32m';
@@ -42,7 +46,7 @@ module.exports = (function(){
                     msg = req.headers['x-forwarded-for'] + ' ' + req.headers['user-agent'];
                 }
 
-                //•\¦ŠÔ
+                //è¡¨ç¤ºæ™‚é–“
                 var dt = new Date();
                 var formatted = dt.toFormat(" HH24:MI:SS ");
 
@@ -64,6 +68,80 @@ module.exports = (function(){
         addMinutes :
             function(date, minutes){
                 return new Date(date.getTime() + minutes * 60000);
+            },
+        getUserNameImg :
+            function(userid, txt){
+
+                var font = '12px Roboto';
+                var canvas = new Canvas(10, 20);
+                var ctx = canvas.getContext('2d');
+                ctx.font = font;
+
+                //æ–‡å­—å¹…ã®è¨ˆç®—
+                var te = ctx.measureText(txt);
+
+                //å¤–æ 
+                canvas = new Canvas(te.width + 16, 24);
+                ctx = canvas.getContext('2d');
+
+                //èƒŒæ™¯å¡—ã‚Šã¤ã¶ã—
+                ctx.beginPath(); 
+                ctx.moveTo(8, 0); 
+                ctx.lineTo(te.width + 16, 0);
+                ctx.lineTo(te.width + 16, 16);
+                ctx.lineTo(8, 16);
+                ctx.closePath(); 
+                ctx.fillStyle = "#ffffff"; 
+                ctx.fill(); 
+
+                //æ 
+                ctx.beginPath(); 
+                ctx.moveTo(8, 1); 
+                ctx.lineTo(te.width + 16, 1); 
+                ctx.lineTo(te.width + 16, 16);
+                ctx.lineTo(8, 16);
+                ctx.closePath(); 
+                ctx.lineWidth = 1; 
+                ctx.stroke(); 
+
+                //æ–œç·š
+                ctx.beginPath(); 
+                ctx.moveTo(0, 24); 
+                ctx.lineTo(8, 16); 
+                ctx.closePath(); 
+                ctx.lineWidth = 1; 
+                ctx.stroke(); 
+
+                //æ–‡å­—
+                ctx.font = font;
+                ctx.fillStyle = '#000000';
+                ctx.textBaseline = 'top';
+                ctx.textAlign    = 'start';
+                ctx.fillText(txt, 12, 1.5);
+
+                var filename = './wui/img/user/' + userid + '.png';
+                var buffer = new Buffer(canvas.toDataURL().split(',')[1], 'base64');
+                fs.writeFile(filename, buffer, function(){
+                    console.log("saved to " + filename);
+                });
+
+                return filename;
+            },
+        wget :
+            function(url, saveto){
+                var outFile = fs.createWriteStream(saveto);
+
+                var req = http.get(url,
+                    function (res) {
+                        res.pipe(outFile);
+                        res.on('end',
+                                function () {
+                                    outFile.close();
+                                }
+                              ); 
+                    }
+                   );
+                return;
             }
     }
 })();
