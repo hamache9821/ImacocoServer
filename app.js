@@ -385,9 +385,7 @@ app.get('/home/*', function(req, res){
     );
 });
 
-
-//そのうち
-//ユーザ作成
+//新規ユーザ作成
 app.get('/create_user', function(req, res){
     util.setConsolelog(req);
 
@@ -396,33 +394,84 @@ app.get('/create_user', function(req, res){
               );
 });
 
-//ユーザ作成
+//新規ユーザ作成
 app.post('/create_user', function(req, res){
     util.setConsolelog(req);
-
-    console.log('nickname:'     + req.body.nickname);
-    console.log('email:'          + req.body.email);
-    console.log('username:'          + req.body.username);
-    console.log('password:'     + req.body.password);
-    console.log('password2:'         + req.body.password2);
-
-
-    //todo ユーザ存在チェック
-    
-/*
-    var _User = new UserInfo();
-    _User.userid   = req.body.username;
-    _User.nickname = req.body.nickname;
-    _User.password = getHash(req.body.password);
-    _User.email    = req.body.email;
-*/
-
-//    _User.save();
-
-
     util.inspect(req.body);
-    
-    res.status(404).send('Sorry, we cannot find that!');
+
+    if (req.body.username === undefined || req.body.username === ''){
+        var d={};
+        d.result = 0;
+        d.errmsg = 'username can not be set to null';
+
+        res.set('Content-Type', 'text/javascript; charset=utf-8');
+        res.send('(' + JSON.stringify(d) + ')'); 
+
+    } else if (req.body.email === undefined || req.body.email === ''){
+        var d={};
+        d.result = 0;
+        d.errmsg = 'email can not be set to null';
+
+        res.set('Content-Type', 'text/javascript; charset=utf-8');
+        res.send('(' + JSON.stringify(d) + ')'); 
+
+    } else {
+        UserInfo.findOne(
+            {email : req.body.email},
+            function (err, result) {
+                var d={};
+
+                if (err && result === null) {
+                    d.result = 0;
+                    d.errmsg = 'db err';
+                    res.set('Content-Type', 'text/javascript; charset=utf-8');
+                    res.send('(' + JSON.stringify(d) + ')'); 
+                } else if (result === null){
+                    UserInfo.findOne(
+                        {userid : req.body.username},
+                        function (err, result) {
+                            if (err && result === null) {
+                                d.result = 0;
+                                d.errmsg = 'db err';
+                            } else if (result === null){
+
+                                if (req.body.nickname === ''){
+                                    req.body.nickname = req.body.username;
+                                }
+
+                                //ユーザー作成
+                                var _User = new UserInfo();
+                                _User.userid   = req.body.username;
+                                _User.nickname = req.body.nickname;
+                                _User.password = util.getHash(req.body.password);
+                                _User.email    = req.body.email;
+                                _User.save();
+
+                                //nickname画像生成
+                                var filename = util.getUserNameImg(req.body.username, req.body.nickname);
+
+                                d.result = 1;
+                                d.errmsg = 'ok';
+
+                            } else {
+                                d.result = 0;
+                                d.errmsg = 'username is already exists';
+                            }
+
+                            res.set('Content-Type', 'text/javascript; charset=utf-8');
+                            res.send('(' + JSON.stringify(d) + ')'); 
+                        }
+                    );
+
+                } else {
+                    d.result = 0;
+                    d.errmsg = 'email is already exists';
+                    res.set('Content-Type', 'text/javascript; charset=utf-8');
+                    res.send('(' + JSON.stringify(d) + ')'); 
+                }
+            }
+        );
+    }
 });
 
 //そのうち
