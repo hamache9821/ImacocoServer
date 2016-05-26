@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>今ココなう！(仮):新規ユーザー作成</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="/static/common.js"></script>
+    <script type="text/javascript" src="/static/subModal.js"></script>
+    <script type="text/javascript" src="/static/user.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/simple.css">
+    <link rel="stylesheet" type="text/css" href="/css/subModal.css" />
+</head>
+<body>
+    <div id="Header">
+    	<h1 id="headerTitle">今ココなう！(仮)</h1>
+    </div>
+
+    <div id="Content">
+    ユーザーを作成します。
+    </div>
+
+    <form>
+    <font color="red"></font><br />
+    <table class="form">
+    <tr>
+      <th>メールアドレス<span class="required">(*)</span></th>
+      <td><input id="email" size="64" value="" /></td>
+    </tr>
+    <tr>
+      <th>ニックネーム</th>
+      <td><input id="nickname" size="20" value="" /> ニックネームは後で変更できます</td>
+    </tr>
+    <tr>
+      <th>ユーザーID<span class="required">(*)</span></th>
+      <td><input id="username" size="20" value="" />&nbsp;半角英数字と記号<b>!@#$%^()-=_.,</b>が使えます</td>
+    </tr>
+    <tr>
+      <th>パスワード<span class="required">(*)</span></th>
+      <td><input id="password" size="20" type="password" /></td>
+    </tr>
+    <tr>
+      <th>パスワード(確認)<span class="required">(*)</span></th>
+      <td><input id="password2" type="password" size="20" /></td>
+    </tr>
+    </table>
+    <input type="button" value="作成" onClick="javascript:createUserInfo();" / >
+
+    </form>
+    <span class="required">(*)</span>は必須項目となります。<br>
+    </div>
+    <div id="Footer">
+        <a href="/">TOPページへ戻る</a>
+    </div>
+</body>
+</html>
