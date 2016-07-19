@@ -14,7 +14,7 @@
 * ストレージを積めるだけ  
 > 1ユーザが8,640Post/Day(10秒に一回で24時間)データを送信した場合に、約1.3MBのストレージが必要です。
 
-###環境構築方法(Debianの場合・他は知らない)  
+###環境構築方法(Debianの場合)  
 * nvmとNode.jsをインストール
 ``` sh
 $ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | sh
@@ -52,17 +52,21 @@ $ node app.js
 現時点で実装しているAPI  
 * home/
 * view
+* create_user
 * user
-* user/update_userinfo
-* user/getuserinfo
-* api/post
-* api/user_list
-* api/latest
-* api/getuserinfo
-* api/logintest
+ * /
+ * /update_userinfo
+ * /getuserinfo
+* api
+ * /post
+ * /user_list
+ * /latest
+ * /getuserinfo
+ * /logintest
 
 ### ユーザー登録方法
-APIの実装がまだなので、使いたい方はmongoのconsoleで適当に追加してください。
+create_userを呼び出すことで、登録フォームが出るので、そちらで登録してください。  
+またはmongoのconsoleで適当に追加してください。  
 
 ```mongo
 > use ImacocoDB
@@ -79,7 +83,7 @@ MIT
 なので、商用利用したいとか、こういう機能が欲しいとかは勝手にforkしてやればいいと思うよ。
 
 ###その他
- Q.インストール方法教えて！
+ Q.インストール方法教えて！  
  A.お 前 の 目 は 節 穴 か
  
  Q.なんかおかしいんだけど  
