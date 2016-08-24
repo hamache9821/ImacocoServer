@@ -1,9 +1,24 @@
 {
   "name": "Imacoco-server",
   "version": "0.1.0",
+  "description": "Compatibility server app for ImakokoNow web service.",
+  "homepage": "http://imacoco.589406.com",
   "private": true,
+  "author": {
+    "name": "Hamache9821",
+    "url": "http://github.com/hamache9821"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hamache9821/ImacocoServer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hamache9821/ImacocoServer/issues"
+  },
+  "license": "MIT",
   "scripts": {
-    "start": "node app"
+    "start": "node app.js",
+    "debug": "node-dev app.js"
   },
   "dependencies": {
     "express": "*",
@@ -15,5 +30,8 @@
     "ejs": "*",
     "canvas": "*",
     "mongoose": "*"
+  },
+  "engines": {
+    "node": ">=5.6.0"
   }
 }
