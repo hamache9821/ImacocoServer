@@ -4,11 +4,11 @@
     <head>
         <title>今ココなう！(仮):ユーザーページ</title>
         <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-        <link rel="stylesheet" type="text/css" href="/static/subModal.css" />
         <script type="text/javascript" src="/static/common.js"></script>
         <script type="text/javascript" src="/static/subModal.js"></script>
         <script type="text/javascript" src="/static/user.js"></script>
         <link rel="stylesheet" type="text/css" href="/css/simple.css">
+        <link rel="stylesheet" type="text/css" href="/css/subModal.css" />
     </head>
     <body>
     <div id="Header">
@@ -49,8 +49,12 @@
                     <td><input id="jtv" value="<%= jtv %>" size="20" /></td>
                 </tr>
                 <tr>
-                    <th>ニコニコ動画ID<br>ニコニコ動画の<a href="http://www.nicovideo.jp/my/">マイページ</a>に表示されているIDの数字です。<br/><font color="red">コミュニティ番号(<b>co</b>xxxxx)ではありません！</font><br>ニコニコ生放送のLIVEアイコン(<img src="/img/nicolive.png">)を出したい人は登録してください</th>
+                    <th>ニコニコ動画ID<br>ニコニコ動画の<a href="http://www.nicovideo.jp/my/" target="_blank">マイページ</a>に表示されているIDの数字です。<br/><font color="red">コミュニティ番号(<b>co</b>xxxxx)ではありません！</font><br>ニコニコ生放送のLIVEアイコン(<img src="/img/nicolive.png">)を出したい人は登録してください</th>
                     <td><input id="nicolive" value="<%= nicolive %>" size="20" /></td>
+                </tr>
+                <tr>
+                    <th><a href="https://locapos.com/" target="_blank">ろけぽす</a>連携<br>ここにトークンを入力してください。</th>
+                    <td><input id="locapos_token" value="<%= locapos_token %>" size="40" /></td>
                 </tr>
                 <tr>
                     <th>WebURL</th><td><input id="web" value="<%= web %>" size="40" /></td>

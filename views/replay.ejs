@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<link rel="shortcut icon" href="/img/favicon.ico" type="image/vnd.microsoft.icon" />
+<link rel="icon" href="/img/favicon.ico" type="image/vnd.microsoft.icon" />
+<title>今ココ！リプレイ（仮） - <%= today %></title>
+<link rel="canonical" href="/date/20160304" />
+<link rel="stylesheet" type="text/css" href="/css/replay.css?20111024" />
+<link rel="stylesheet" type="text/css" href="/css/pepper-grinder/jquery-ui-1.7.2.custom.css" />
+</head>
+<body>
+<!-- preload -->
+<div id="preload"></div>
+
+<!-- help -->
+<div id="help"></div>
+
+<!-- map -->
+<div id="map"></div>
+
+<!-- info -->
+<div id="info">
+<div id="info-trace" class="ui-corner-tl" title="注目しているユーザーID">&nbsp;</div>
+<div id="info-speed" class="ui-corner-tr" title="再生スピード（[A]で加速、[S]で減速）">&nbsp;</div>
+</div>
+
+<!-- clock -->
+<div id="clock" title="表示中の日時（時計は[T]で隠すことができます）"></div>
+
+<!-- link-date -->
+<div id="link-date">
+<div id="link-date-yesterday" class="ui-corner-bl" title="前の日"><a href="./date/<%= yesterday %>"><%= yesterday %></a></div><div id="link-date-top" title="トップページへ"><a href="/">TOP</a></div><div id="link-date-tomorrow" class="ui-corner-br">&nbsp;</div></div>
+
+<!-- control -->
+<div id="control" class="ui-corner-all">
+<div id="control-panel">
+<a href="#" id="control-play" class="ui-state-default ui-corner-all control-button" title="再生 [Space]"><span class="ui-icon ui-icon-play"></span></a>
+<a href="#" id="control-seek-first" class="ui-state-default ui-corner-all control-button" title="巻き戻し [R]"><span class="ui-icon ui-icon-seek-first"></span></a>
+<div id="slider-wrap">
+<div id="slider">
+</div>
+</div>
+<a href="#" id="control-seek-prev" class="ui-state-default ui-corner-all control-button control-button-slim" title="１分戻る [K]"><span class="ui-icon ui-icon-seek-prev"></span></a>
+<a href="#" id="control-seek-next" class="ui-state-default ui-corner-all control-button control-button-slim" title="１分進む [J]"><span class="ui-icon ui-icon-seek-next"></span></a>
+<a href="#" id="control-help" class="ui-icon ui-icon-help ui-corner-all" title="ヘルプ [?]">[？]</a>
+</div>
+
+</div>
+
+<script src="//maps.google.com/maps/api/js?sensor=false"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="/js/jquery-1.3.2.min.js"><\/script>')</script>
+<script src="/static/jquery-ui-1.7.2.custom.min.js"></script>
+<script src="/static/jquery.hotkeys.min.js"></script>
+<script src="/static/overlay.js"></script>
+<script src="/static/script-v3-replay.js"></script>
+<script>
+	var plot_mode = 0;
+	var plot_count = 100;
+	var user_list = [ 'all' ];
+	var trace_user = '__nouser__';
+
+	var replayDate =  20160304;
+	var replayYear = 2016;
+	var replayMonth = 3;
+	var replayDay = 4;
+	var replayLocate = 0;
+	var replayPlay = 0;
+	var replaySpeed = 7;
+	var replaySpeedList = [1, 10, 30, 60, 100, 150, 200, 300, 400, 600, 800, 1000, 1500, 3000, 6000];
+	var replayUpdateInterval = 60000 / replaySpeedList[replaySpeed];
+	var lastReplayLocate = -1;
+</script>
+</body>
+</html>

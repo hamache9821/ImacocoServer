@@ -1,0 +1,238 @@
+v\:* {
+	behavior: url(#default#VML);
+}
+
+html,body {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	font-family: Verdana, Arial, sans-serif;
+	font-size: 12px;
+	background: #999;
+}
+
+img {
+	border: 0px;
+}
+
+a {
+	text-decoration:none;
+}
+a:link {
+	color:#09c;
+}
+a:visited {
+	color:#07a;
+}
+a:hover {
+	background-color:#eee;
+}
+
+#help {
+	position: absolute;
+	width: 600px;
+	left: 50%;
+	margin-top: 20px;
+	margin-left: -300px;
+	padding: 20px;
+	background: #fff;
+	z-index: 9999;
+	clear: both;
+	display: none;
+}
+
+#preload {
+	display: none;
+}
+
+#map {
+	width: 100%;
+	height: 100%;
+	position: relative;
+	overflow: hidden;
+	top: 0;
+	left: 0;
+}
+
+#info {
+	position: absolute;
+	width: 155px;
+	height: 14px;
+	top: 10px;
+	left: 80px;
+	-moz-opacity: 0.90;
+	filter: alpha(opacity =               90);
+	opacity: 0.90;
+	clear: both;
+}
+
+#info-trace, #info-speed {
+	float: left;
+	border: 1px solid #666;
+	padding: 1px 2px;
+	font-family: monospace;
+	font-size: 10px;
+	line-height: 10px;
+	text-align: center;
+}
+
+#info-trace {
+	width: 100px;
+	background: #ffe;
+}
+
+#info-speed {
+	width: 40px;
+	background: #eef;
+	margin-left: 3px;
+}
+
+#clock {
+	position: absolute;
+	width: 155px;
+	height: 60px;
+	top: 27px;
+	left: 80px;
+	background: #111;
+	padding: 5px 0;
+	font-weight: bold;
+	font-family: serif;
+	color: white;
+	-moz-opacity: 0.90;
+	filter: alpha(opacity =               90);
+	opacity: 0.90;
+	text-align: center;
+}
+
+#clock-date {
+	display: block;
+	font-size: 18px;
+	line-height: 20px;
+	overflow: hidden;
+}
+
+#clock-time {
+	display: block;
+	font-size: 24px;
+	line-height: 42px;
+	overflow: hidden;
+}
+
+#clock-time .digit {
+	font-size: 40px;
+}
+
+#link-date {
+	position: absolute;
+	width: 155px;
+	height: 14px;
+	top: 100px;
+	left: 80px;
+	-moz-opacity: 0.90;
+	filter: alpha(opacity =               90);
+	opacity: 0.90;
+	clear: both;
+}
+
+#link-date-yesterday, #link-date-tomorrow {
+	width: 54px;
+	float: left;
+	background: #999;
+	border: 1px solid #666;
+	padding: 1px 2px;
+	font-family: monospace;
+	font-size: 10px;
+	line-height: 10px;
+	text-align: center;
+}
+
+#link-date-yesterday {
+
+}
+
+#link-date-top {
+	width: 23px;
+	float: left;
+	background: #ddd;
+	border: 1px solid #666;
+	padding: 1px 2px;
+	margin: 0 3px;
+	font-family: monospace;
+	font-size: 10px;
+	line-height: 10px;
+	text-align: center;
+}
+
+#link-date-tomorrow {
+
+}
+
+#link-date-yesterday a, #link-date-tomorrow a {
+	color: white;
+}
+
+#control {
+	position: absolute;
+	width: 500px;
+	height: 40px;
+	left: 50%;
+	bottom: 20px;
+	margin-left: -250px;
+	padding: 5px 10px;
+	background: #666;
+	font: small arial;
+	clear: both;
+	overflow: hidden;
+}
+
+#control .control-button {
+	float: left;
+	width: 20px;
+	height: 20px;
+	margin: 5px 3px;
+	padding: 5px;
+	border: 1px solid #666;
+	background: #fff;
+}
+
+#control .control-button-slim {
+	width: 16px;
+	padding: 5px 2px;
+}
+
+#control #control-help {
+	float: left;
+	width: 15px;
+	height: 10px;
+	margin: 20px 0 0 6px;
+	padding: 3px 2px;
+	font-size: 10px;
+	line-height: 10px;
+	text-align: center;
+	background-color: #ffc;
+	color: #ffc;
+}
+
+
+#control #slider {
+	width: 300px;
+	margin: 0;
+	border: 1px solid #999;
+	padding: 0;
+}
+
+#control #slider-wrap {
+	float: left;
+	height: 25px;
+	width: 300px;
+	padding: 10px 20px;
+	background: url("/img/bg_slider.png") no-repeat -3px bottom;
+}
+
+.loadingOverlay {
+	background: url("/img/object_loading.gif") no-repeat center center;
+}

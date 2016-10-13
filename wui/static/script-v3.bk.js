@@ -320,13 +320,6 @@ function initialize() {
 			mapLoadedFlag = true;
 		}
 	});
-    
-/*
-    //
-	$.getJSON('/api/test/initUser',
-		{},function(json){}
-	);
-*/
 }
 
 // 更新処理
@@ -336,225 +329,204 @@ function update() {
 		{
 			t : new Date().getTime()
 		},
-		function(json){
-            updateMap(json);
-        }
-	);
+		function(json) {
+			if (json.result) {
+				// 全体を表示するための範囲情報
+				var min_lat = 91;
+				var min_lon = 181;
+				var max_lat = -91;
+				var max_lon = -181;
+				var valid_users = 0;
 
-/*
-    //ド○ココの情報を取得する
-	$.getJSON('/api/latest2',
-		{
-			t : new Date().getTime()
-		},
-		function(json){
-            updateMap(json, true);
-        }
-	);
-*/
+				// 更新チェックフラグのリセット
+				for (var u in users) {
+					users[u].update = false;
+				}
 
-}
+				var viewArea = map.getBounds();
 
-//位置情報を描画
-function updateMap(json, trace) {
-	if (json.result) {
-		// 全体を表示するための範囲情報
-		var min_lat = 91;
-		var min_lon = 181;
-		var max_lat = -91;
-		var max_lon = -181;
-		var valid_users = 0;
+				// 全員分ループ
+				for ( var i = 0; i < json.points.length; i++) {
+					var data = json.points[i];
 
-		// 更新チェックフラグのリセット
-		for (var u in users) {
-			users[u].update = false;
-		}
+					// ユーザーID
+					var username = data.user;
 
-		var viewArea = map.getBounds();
-
-		// 全員分ループ
-		for ( var i = 0; i < json.points.length; i++) {
-			var data = json.points[i];
-
-			// ユーザーID
-			var username = data.user;
-
-			// ユーザーが定義されてない場合は、ユーザーを初期化
-			if (!isDefined(username, 'users')) {
-				// 表示するユーサーにフラグを付ける
-				if (!user_list || user_list[0] == 'all') {
-					initUser(username, true);
-				} else {
-					var found = false;
-					for (var user in user_list) {
-						if (user_list[user] == username) {
+					// ユーザーが定義されてない場合は、ユーザーを初期化
+					if (!isDefined(username, 'users')) {
+						// 表示するユーサーにフラグを付ける
+						if (!user_list || user_list[0] == 'all') {
 							initUser(username, true);
-							found = true;
-							break;
-						}
-					}
-					if(!found) {
-						initUser(username, false);
-					}
-				}
-			}
-			var user = users[username];
-
-			// 更新チェックフラグ
-			user.update = true;
-
-			// ニックネーム・緯度・経度・方位・高度・速度・アイコン種別・生放送の情報
-			var nickname = data.nickname;
-			var lat = parseFloat(data.lat);
-			var lon = parseFloat(data.lon);
-			var td = parseFloat(data.dir);
-			var altitude = parseFloat(data.altitude);
-			var velocity = parseFloat(data.velocity);
-			var type = parseInt(data.type);
-			if(type != 99 && (type < 0 || type > 10)){
-				type = 0;
-			}
-			var ustream_status = data.ustream_status;
-
-			var pt = new google.maps.LatLng(lat, lon);
-
-			// 地図の描画範囲外のアイコンは削除する
-			if (traceuser != 'all' && traceuser != username && !viewArea.contains(pt)) {
-                if (!trace){
-    				removeUserMarker(user);
-    				continue;
-                }
-			}
-
-			// 表示するユーザーのみプロットする
-			if(user.watch) {
-				// 前回の座標と違った場合はプロットする
-				if (checkMoving(user.lat, user.lon, lat, lon)) {
-					// 現在地アイコンマーカー
-					if(user.direction_marker){
-						user.direction_marker.setIcon(getDirectionIcon(td, type, username));
-						user.direction_marker.setPosition(pt);
-					} else {
-						user.direction_marker = createClickableMarker(pt, username);
-						user.direction_marker.setIcon(getDirectionIcon(td, type, username));
-					}
-
-					// ニックネームマーカー
-					if(user.nick_marker){
-						user.nick_marker.setPosition(pt);
-					} else {
-						user.nick_marker = new google.maps.Marker( {
-							clickable : false,
-							icon : user.nick_icon,
-							position : pt,
-							map : map,
-							zIndex : 3
-						});
-					}
-
-					// ストリームマーカー
-					if(user.stream_marker) {
-						if(ustream_status && ustream_status != 'offline') {
-							if (user.stream_status != ustream_status) {
-								user.stream_marker.setMap(null);
-								user.stream_marker = makeStreamMarker(data.ustream_status, pt);
-							} else {
-								user.stream_marker.setPosition(pt);
-							}
 						} else {
-							user.stream_marker.setMap(null);
-						}
-					} else {
-						if(ustream_status && ustream_status != 'offline') {
-							user.stream_marker = makeStreamMarker(data.ustream_status, pt);
+							var found = false;
+							for (var user in user_list) {
+								if (user_list[user] == username) {
+									initUser(username, true);
+									found = true;
+									break;
+								}
+							}
+							if(!found) {
+								initUser(username, false);
+							}
 						}
 					}
+					var user = users[username];
 
-					// トラッキングのプロットとパス
-					user.plot.push(pt);
-					if (user.plot.length > plotcount) {
-						user.plot.shift();
+					// 更新チェックフラグ
+					user.update = true;
+
+					// ニックネーム・緯度・経度・方位・高度・速度・アイコン種別・生放送の情報
+					var nickname = data.nickname;
+					var lat = parseFloat(data.lat);
+					var lon = parseFloat(data.lon);
+					var td = parseFloat(data.dir);
+					var altitude = parseFloat(data.altitude);
+					var velocity = parseFloat(data.velocity);
+					var type = parseInt(data.type);
+					if(type != 99 && (type < 0 || type > 10)){
+						type = 0;
+					}
+					var ustream_status = data.ustream_status;
+
+					var pt = new google.maps.LatLng(lat, lon);
+
+					// 地図の描画範囲外のアイコンは削除する
+					if (traceuser != 'all' && traceuser != username && !viewArea.contains(pt)) {
+						removeUserMarker(user);
+						continue;
 					}
 
-					if(plotmode == 1) {
-						var marker = new google.maps.Marker( {
-							clickable : false,
-							icon : plot_icon,
-							position : pt,
-							map : map,
-							zIndex : 0
-						});
-						user.plot_markers.push(marker);
+					// 表示するユーザーのみプロットする
+					if(user.watch) {
+						// 前回の座標と違った場合はプロットする
+						if (checkMoving(user.lat, user.lon, lat, lon)) {
+							// 現在地アイコンマーカー
+							if(user.direction_marker){
+								user.direction_marker.setIcon(getDirectionIcon(td, type, username));
+								user.direction_marker.setPosition(pt);
+							} else {
+								user.direction_marker = createClickableMarker(pt, username);
+								user.direction_marker.setIcon(getDirectionIcon(td, type, username));
+							}
 
-						if(user.plot_markers.length > plotcount) {
-							marker = user.plot_markers.shift();
-							marker.setMap(null);
+							// ニックネームマーカー
+							if(user.nick_marker){
+								user.nick_marker.setPosition(pt);
+							} else {
+								user.nick_marker = new google.maps.Marker( {
+									clickable : false,
+									icon : user.nick_icon,
+									position : pt,
+									map : map,
+									zIndex : 3
+								});
+							}
+
+							// ストリームマーカー
+							if(user.stream_marker) {
+								if(ustream_status && ustream_status != 'offline') {
+									if (user.stream_status != ustream_status) {
+										user.stream_marker.setMap(null);
+										user.stream_marker = makeStreamMarker(data.ustream_status, pt);
+									} else {
+										user.stream_marker.setPosition(pt);
+									}
+								} else {
+									user.stream_marker.setMap(null);
+								}
+							} else {
+								if(ustream_status && ustream_status != 'offline') {
+									user.stream_marker = makeStreamMarker(data.ustream_status, pt);
+								}
+							}
+
+							// トラッキングのプロットとパス
+							user.plot.push(pt);
+							if (user.plot.length > plotcount) {
+								user.plot.shift();
+							}
+
+							if(plotmode == 1) {
+								var marker = new google.maps.Marker( {
+									clickable : false,
+									icon : plot_icon,
+									position : pt,
+									map : map,
+									zIndex : 0
+								});
+								user.plot_markers.push(marker);
+
+								if(user.plot_markers.length > plotcount) {
+									marker = user.plot_markers.shift();
+									marker.setMap(null);
+								}
+							} else if(plotmode == 2) {
+								user.plot_path.setPath(user.plot);
+								user.plot_path.setMap(map);
+							}
 						}
-					} else if(plotmode == 2) {
-						user.plot_path.setPath(user.plot);
-						user.plot_path.setMap(map);
+
+						// 次回のためにマーカーと位置情報を保存
+						user.nickname = nickname;
+						user.lat = lat;
+						user.lon = lon;
+						user.td = td;
+						user.altitude = altitude;
+						user.velocity = velocity;
+						user.type = type;
+						user.ustream_status = ustream_status;
+
+						// 追跡するユーザーにパン
+						if (user.trace) {
+							if(initializeFlag){
+								map.setZoom(14);
+								initializeFlag = false;
+							}
+							if(user.infowindow) {
+								$("#infowindow").html(updateInformation(username));
+							}
+							map.panTo(pt);
+						}
+
+						// 地図表示範囲計算のセット
+						min_lat = Math.min(lat, min_lat);
+						max_lat = Math.max(lat, max_lat);
+						min_lon = Math.min(lon, min_lon);
+						max_lon = Math.max(lon, max_lon);
+						valid_users++;
 					}
 				}
 
-				// 次回のためにマーカーと位置情報を保存
-				user.nickname = nickname;
-				user.lat = lat;
-				user.lon = lon;
-				user.td = td;
-				user.altitude = altitude;
-				user.velocity = velocity;
-				user.type = type;
-				user.ustream_status = ustream_status;
+				// 更新チェックフラグの確認とユーザー情報の削除
+				for(var u in users) {
+					if (!users[u].update) {
+						removeUserMarker(users[u]);
+					}
+				}
 
-				// 追跡するユーザーにパン
-				if (user.trace) {
-					if(initializeFlag){
+				// 地図表示範囲の設定
+				if (traceuser == 'all' && valid_users > 0) {
+					var avg_lat = (min_lat + max_lat) / 2;
+					var avg_lon = (min_lon + max_lon) / 2;
+					var ct = new google.maps.LatLng(avg_lat, avg_lon);
+					if (valid_users == 1) {
+						map.setCenter(ct);
 						map.setZoom(14);
-						initializeFlag = false;
+					} else {
+						// 全体が表示できる矩形座標を計算
+						region = new google.maps.LatLngBounds(
+							new  google.maps.LatLng(min_lat, min_lon),
+							new  google.maps.LatLng(max_lat, max_lon)
+						);
+						// 全体が表示できるように位置とズームを設定
+						map.fitBounds(region);
 					}
-					if(user.infowindow) {
-						$("#infowindow").html(updateInformation(username));
-					}
-					map.panTo(pt);
 				}
-
-				// 地図表示範囲計算のセット
-				min_lat = Math.min(lat, min_lat);
-				max_lat = Math.max(lat, max_lat);
-				min_lon = Math.min(lon, min_lon);
-				max_lon = Math.max(lon, max_lon);
-				valid_users++;
 			}
 		}
-
-		// 更新チェックフラグの確認とユーザー情報の削除
-		for(var u in users) {
-			if (!users[u].update) {
-				removeUserMarker(users[u]);
-			}
-		}
-
-		// 地図表示範囲の設定
-		if (traceuser == 'all' && valid_users > 0) {
-			var avg_lat = (min_lat + max_lat) / 2;
-			var avg_lon = (min_lon + max_lon) / 2;
-			var ct = new google.maps.LatLng(avg_lat, avg_lon);
-			if (valid_users == 1) {
-				map.setCenter(ct);
-				map.setZoom(14);
-			} else {
-				// 全体が表示できる矩形座標を計算
-				region = new google.maps.LatLngBounds(
-					new  google.maps.LatLng(min_lat, min_lon),
-					new  google.maps.LatLng(max_lat, max_lon)
-				);
-				// 全体が表示できるように位置とズームを設定
-				map.fitBounds(region);
-			}
-		}
-	}
+	);
 }
-
 
 // 現在地アイコンの作成（CSS Spriteを使う）
 function makeDirectionIcon(td, type) {
