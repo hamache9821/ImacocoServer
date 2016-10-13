@@ -46,6 +46,7 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
 //--------- MongoDB設定 -----------
+mongoose.Promise = global.Promise;
 var db = mongoose.createConnection('mongodb://' + dbHost + '/' + dbName, function(error, res){});
 
 //ユーザ認証モデル
@@ -632,8 +633,8 @@ app.post('/change_password_request', function(req, res){
 //--------- /user -----------
 //ユーザー名のpng画像を返す
 app.get('/user/*.png', function(req, res){
-    util.setConsolelog(req);
-    console.log(req.url);
+//    util.setConsolelog(req);
+//    console.log(req.url);
 
     fs.readFile('./wui/img' + req.url,
                 function(err, data){
@@ -820,9 +821,8 @@ app.get('user/getuserinfo', function(req, res){
 //--------- /api 座標関係 -----------
 //座標データを登録します
 app.post('/api/post', passport.authenticate('basic', { session: false }), function(req, res){
-    util.setConsolelog(req, req.user.userid);
+    util.setConsolelog(req, req.user.userid + ' ' + req.body.time);
 
-console.log(req.body.time);
     var locinfo = new LocInfo();
     locinfo.valid          = true;
     locinfo.time           = req.body.time;
@@ -837,7 +837,7 @@ console.log(req.body.time);
     locinfo.flag           = '1';
     locinfo.saved          = req.body.save;     //jsonの互換性のために残してるだけ
     locinfo.ustream_status = 'offline';         //jsonの互換性のために残してるだけ
-    locinfo.location = [parseFloat(points[x].lon), parseFloat(points[x].lat)];
+    locinfo.location = [parseFloat(req.body.lon), parseFloat(req.body.lat)];
 
     locinfo.save(function(err){
         if(err){

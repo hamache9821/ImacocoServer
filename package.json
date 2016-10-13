@@ -22,6 +22,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "body-parser": "*",
     "express": "*",
     "express-session": "*",
     "express-domain-middleware": "*",

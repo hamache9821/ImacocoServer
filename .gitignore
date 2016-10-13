@@ -34,3 +34,5 @@ node_modules
 
 # img cache directory
 wui/img/user
+
+.vscode/
