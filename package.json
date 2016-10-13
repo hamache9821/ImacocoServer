@@ -1,25 +1,26 @@
 {
   "name": "Imacoco-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "private": true,
   "description": "Compatibility server app for ImakokoNow web service.",
   "homepage": "http://imacoco.589406.com",
-  "private": true,
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "debug": "node-dev app.js"
+  },
   "author": {
     "name": "Hamache9821",
     "url": "http://github.com/hamache9821"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hamache9821/ImacocoServer.git"
+  "repository" :{
+     "type" : "git"
+    ,"url" : "https://github.com/hamache9821/ImacocoServer.git"
   },
   "bugs": {
     "url": "https://github.com/hamache9821/ImacocoServer/issues"
   },
   "license": "MIT",
-  "scripts": {
-    "start": "node app.js",
-    "debug": "node-dev app.js"
-  },
   "dependencies": {
     "express": "*",
     "express-session": "*",
@@ -27,9 +28,11 @@
     "passport": "*",
     "passport-http": "*",
     "date-utils": "*",
+    "moment-timezone": "*",
     "ejs": "*",
     "canvas": "*",
-    "mongoose": "*"
+    "mongoose": "*",
+    "geocoder": "*"
   },
   "engines": {
     "node": ">=5.6.0"
