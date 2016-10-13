@@ -70,7 +70,7 @@ module.exports = (function(){
                 return new Date(date.getTime() + minutes * 60000);
             },
         getUserNameImg :
-            function(userid, txt){
+            function(userid, txt, fillStyle){
 
                 var font = '12px Roboto';
                 var canvas = new Canvas(10, 20);
@@ -91,7 +91,7 @@ module.exports = (function(){
                 ctx.lineTo(te.width + 16, 16);
                 ctx.lineTo(8, 16);
                 ctx.closePath(); 
-                ctx.fillStyle = "#ffffff"; 
+                ctx.fillStyle = fillStyle; 
                 ctx.fill(); 
 
                 //枠
@@ -122,7 +122,7 @@ module.exports = (function(){
                 var filename = './wui/img/user/' + userid + '.png';
                 var buffer = new Buffer(canvas.toDataURL().split(',')[1], 'base64');
                 fs.writeFile(filename, buffer, function(){
-                    console.log("saved to " + filename);
+                    //console.log("saved to " + filename);
                 });
 
                 return filename;
