@@ -17,6 +17,9 @@ var port = process.env.PORT || 80;
 var dbHost = 'localhost';
 var dbName = 'ImacocoDB';
 
+//ろけぽす連携
+var locapos_client_id = '';
+
 
 //モジュール宣言
 require('date-utils');
@@ -29,6 +32,7 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
+var geocoder = require('geocoder');
 
 //Express関係
 var app = express();
@@ -46,19 +50,21 @@ var db = mongoose.createConnection('mongodb://' + dbHost + '/' + dbName, functio
 
 //ユーザ認証モデル
 var UserSchema = new mongoose.Schema({
-    userid      : {type: String, required: true},
-    password    : {type: String, required: true},
-    email       : {type: String, required: true},
-    nickname    : {type: String, required: true},
-    ust         : {type: String},
-    jtv         : {type: String},
-    nicolive    : {type: String},
-    show        : {type: String},
-    web         : {type: String},
-    description : {type: String},
-    popup       : {type: String},
-    speed       : {type: String},
-    twitter     : {type: String}
+    userid        : {type: String, required: true},
+    password      : {type: String, required: true},
+    email         : {type: String, required: true},
+    nickname      : {type: String, required: true},
+    ust           : {type: String},
+    jtv           : {type: String},
+    nicolive      : {type: String},
+    show          : {type: String},
+    web           : {type: String},
+    description   : {type: String},
+    popup         : {type: String},
+    speed         : {type: String},
+    twitter       : {type: String},
+    locapos_token : {type: String},
+    locapos_valid : {type: Boolean}
 });
 
 //位置情報保持モデル
@@ -75,7 +81,9 @@ var LocSchema = new mongoose.Schema({
     type           : {type: String},
     flag           : {type: String},
     ustream_status : {type: String},
-    saved          : {type: String}
+    saved          : {type: String},
+    relay_service  : {type: String},
+    location       : {type: Array}
 });
 
 //todo グループ管理モデル
@@ -96,7 +104,7 @@ var UserInfo = db.model('User', UserSchema);
 var LocInfo  = db.model('Locinfo', LocSchema);
 
 //認証ロジック
-//互換性のためにとりあえずbasic認証
+//互換性維持のためにbasic認証
 passport.use(new BasicStrategy(
     function(userid, password, done) {
         process.nextTick(function(){
@@ -110,7 +118,6 @@ passport.use(new BasicStrategy(
               if (user.password != util.getHash(password)) {
                   return done(null, false, {message: 'invalid passwords.'}); 
               }
-              //todo password隠蔽化
               return done(null, user);
             });
         });
@@ -118,19 +125,51 @@ passport.use(new BasicStrategy(
 ));
 
 //--------- 全体向け -----------
-
 //静的なファイルのルーティング
 app.use(express.static('wui'));
 
+//
+getRelayData();
+
+app.get('/api/test', function(req, res){
+    util.setConsolelog(req,'');
+    res.send('OK');
+});
+
 //そのうち
-//今ココリプレイ的なアレ
-app.get('/date/*', function(req, res){
+//今ココリプレイ用
+app.get('/replay*', function(req, res){
+    util.setConsolelog(req);
+
+//    var day =req.url.split('/')[3].replace('.json','');
+
+    res.render('replay',
+               {today : '20160525',
+                yesterday : '20160524'
+                
+                
+                }
+              );
+});
+
+/*
+var timer = setInterval(function(){
+    console.log('timer');
+    
+    
+    }, 5000);
+*/
+
+
+//そのうち
+//今ココリプレイ用
+app.get('/replay/date/*', function(req, res){
     util.setConsolelog(req);
     res.status(404).send('Sorry, we cannot find that!');
 });
 
 //そのうち
-//今ココリプレイ的なアレ
+//今ココリプレイ用
 app.get('/api/json/*.json', function(req, res){
     util.setConsolelog(req);
     res.status(404).send('Sorry, we cannot find that!');
@@ -234,6 +273,115 @@ app.get('/api/json/*.json', function(req, res){
 */
 
 });
+
+
+//今ココリプレイ用
+app.get('/api/json2/*.json', function(req, res){
+    util.setConsolelog(req);
+    res.status(404).send('Sorry, we cannot find that!');
+
+    var day =req.url.split('/')[3].replace('.json','');
+    //http://momentjs.com/timezone/
+    //http://qiita.com/masato/items/32464b45c78962cb5831
+    
+    //todo static file にしたほうが負荷減る？
+    util.inspect(day);
+    var s = new Date(1331209044000).toISOString();
+
+    var gt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2),  0,  0,  0,0);
+    var lt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2), 23, 59, 59,0);
+
+/*
+    /api/latestの処理をベースに一日分抽出したらできそうだけど、負荷を考えないと
+    //リアルタイム集計はさすがに負荷が高すぎるので、バッチ処理で専用テーブル持ったほうがよさげ
+
+    /
+    db.locinfos.distinct("user",
+        {time:{"$gte" : ISODate("2016-03-04T00:00:00Z"), "$lte" : ISODate("2016-03-04T23:59:59Z")}}
+    );
+
+    //その日のユーザー数*1440回のループとかちょっとアレ
+    db.locinfos.find(
+        {time:{"$gte" : ISODate("2016-02-24T01:49:00Z"), "$lte" : ISODate("2016-02-24T01:49:59Z")}},
+        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0}
+    ).sort({time: -1}).limit(1);
+*/
+/*
+    //ユーザ座標
+    var points = [];
+    var day_points = [];
+
+    //現在オンラインのユーザー探す
+    LocInfo.distinct(
+        "user",
+        {time:{"$gte" : gt_date, "$lte" : lt_date}},
+        function(err, result){
+            //何かしらのエラー
+            if (err) {
+                var d    = {};
+                d.result = 0;
+                d.errmsg = 'api/json is error.(distinct)';
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')'); 
+                return;
+            }
+            //該当ユーザなし
+            if (result.length === 0) {
+                var d    = {};
+                d.result = 1;
+                d.points = points;
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')');
+                return;
+            }
+
+            for (var x = 0; x < 1440; x++) {
+//util.inspect(x);
+
+                //オンラインユーザの直近の位置を取得
+                for (var i = 0; i < result.length; i++) {
+//                    console.log(x + ':' + result[i] );
+
+                    LocInfo.find(
+                        {user : result[i], time:{"$gt" : util.addMinutes(gt_date, x), "$lt" : util.addMinutes(gt_date, x + 1)}},
+                        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0},
+
+                        function(err, results){
+                            if (results[0] != undefined){
+                                points.push(results[0]);
+//                                util.inspect(results[0]);
+                            }
+                            if (points.length >= result.length){
+
+                                var d={};
+                                d.result = 1;
+                                d.points = points;
+                                
+                                day_points.push(d);
+//                                util.inspect(day_points);
+
+                              //  res.set('Content-Type', 'text/javascript; charset=utf-8');
+                              //  res.send('(' + JSON.stringify(d) + ')');
+                           }
+                           
+                        }
+                    ).sort({time: -1}).limit(1);
+                    
+
+
+                }
+            // util.inspect(day_points);
+             
+            }
+            res.set('Content-Type', 'text/javascript; charset=utf-8');
+            res.send('(' + JSON.stringify(day_points) + ')');
+        }
+    );
+*/
+
+});
+
+
 
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
@@ -448,7 +596,7 @@ app.post('/create_user', function(req, res){
                                 _User.save();
 
                                 //nickname画像生成
-                                var filename = util.getUserNameImg(req.body.username, req.body.nickname);
+                                var filename = util.getUserNameImg(req.body.username, req.body.nickname, '#ffffff');
 
                                 d.result = 1;
                                 d.errmsg = 'ok';
@@ -511,23 +659,35 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
                 res.status(404).send('Sorry, we cannot find that!');
             } else {
                 res.render('user',
-                           {userid      : req.user.userid,
-                            nickname    : result.nickname,
-                            twitter     : result.twitter,
-                            ust         : result.ust,
-                            jtv         : result.htv,
-                            nicolive    : result.nicolive,
-                            web         : result.web,
-                            description : result.description,
-                            show        : Boolean(result.show),
-                            speed       : Boolean(result.speed),
-                            popup       : result.popup
+                           {userid        : req.user.userid,
+                            nickname      : result.nickname,
+                            twitter       : result.twitter,
+                            ust           : result.ust,
+                            jtv           : result.htv,
+                            nicolive      : result.nicolive,
+                            web           : result.web,
+                            description   : result.description,
+                            show          : Boolean(result.show),
+                            speed         : Boolean(result.speed),
+                            popup         : result.popup,
+                            locapos_token : result.locapos_token
                            }
                           );
             }
         }
     );
 });
+
+
+//
+app.get('/gpslive', function(req, res){
+    util.setConsolelog(req);
+
+    res.render('gpslive',
+               {}
+              );
+});
+
 
 //いつかやる
 //過去に保存したデータをGPXフォーマットでダウンロード
@@ -552,20 +712,23 @@ app.post('/user/update_userinfo', passport.authenticate('basic', { session: fals
         passwd = req.user.password;
     }
 
+    //todo locapos_valid
+
     //ユーザデータ更新処理
     UserInfo.update(
         {userid : req.user.userid},
-        {$set : { password    : passwd,
-                  nickname    : req.body.nickname,
-                  ust         : req.body.ust,
-                  jtv         : req.body.jtv,
-                  nicolive    : req.body.nicolive,
-                  show        : req.body.show,
-                  web         : req.body.web,
-                  description : req.body.description,
-                  popup       : req.body.popup,
-                  speed       : req.body.speed,
-                  twitter     : req.body.twitter
+        {$set : { password      : passwd,
+                  nickname      : req.body.nickname,
+                  ust           : req.body.ust,
+                  jtv           : req.body.jtv,
+                  nicolive      : req.body.nicolive,
+                  show          : req.body.show,
+                  web           : req.body.web,
+                  description   : req.body.description,
+                  popup         : req.body.popup,
+                  speed         : req.body.speed,
+                  twitter       : req.body.twitter,
+                  locapos_token : req.body.locapos_token
                 }
         },
         {upsert : false, multi : false },
@@ -579,7 +742,7 @@ app.post('/user/update_userinfo', passport.authenticate('basic', { session: fals
             }
 
             //nickname画像生成
-            var filename = util.getUserNameImg(req.user.userid, req.body.nickname);
+            var filename = util.getUserNameImg(req.user.userid, req.body.nickname, '#ffffff');
 
             res.set('Content-Type', 'text/javascript; charset=utf-8');
             res.send('(' + JSON.stringify(d) + ')'); 
@@ -659,6 +822,7 @@ app.get('user/getuserinfo', function(req, res){
 app.post('/api/post', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req, req.user.userid);
 
+console.log(req.body.time);
     var locinfo = new LocInfo();
     locinfo.valid          = true;
     locinfo.time           = req.body.time;
@@ -673,6 +837,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     locinfo.flag           = '1';
     locinfo.saved          = req.body.save;     //jsonの互換性のために残してるだけ
     locinfo.ustream_status = 'offline';         //jsonの互換性のために残してるだけ
+    locinfo.location = [parseFloat(points[x].lon), parseFloat(points[x].lat)];
 
     locinfo.save(function(err){
         if(err){
@@ -724,7 +889,7 @@ app.get('/api/latest', function(req, res){
 
     //ユーザ座標
     var points = [];
-    var req_user =[];
+    var req_user = [];
 
     //ユーザ絞込み
     switch (req.query.user){
@@ -773,7 +938,7 @@ app.get('/api/latest', function(req, res){
             for (var i = 0; i < result.length; i++) {
                 LocInfo.find(
                     {user : result[i], time:{"$gte" : util.addMinutes(new Date, -5)}},
-                    {_id : 0, __v : 0, time : 0, flag : 0, saved : 0},
+                    {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
 
                     function(err, results){
                         points.push(results[0]);
@@ -797,15 +962,28 @@ app.get('/api/latest', function(req, res){
     );
 });
 
-//やらない
 //逆ジオコード変換
 app.get('/api/getaddress', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req);
-    console.log('lat:' + req.query.lat);
-    console.log('lon:' + req.query.lon);
 
-    res.set('text/plain; charset=utf-8');
-    res.send('');
+    geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
+        if (data.status == 'OK'){
+            res.set('text/plain; charset=utf-8');
+            res.send(data.results[0].formatted_address);
+        }
+    }, { language: 'ja' });
+});
+
+//逆ジオコード変換(json返却)
+app.get('/api/getaddress.json', passport.authenticate('basic', { session: false }), function(req, res){
+    util.setConsolelog(req);
+
+    geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
+        if (data.status == 'OK'){
+            res.set('text/plain; charset=utf-8');
+            res.send('(' + JSON.stringify(data.results[0]) + ')');
+        }
+    }, { language: 'ja' });
 });
 
 //--------- -----------
@@ -975,3 +1153,84 @@ http.createServer(app).listen(app.get('port'), function(){
 //  console.log('['+ cyan +'INFO' + reset + '] ImacocoNow server listening on port: ' + app.get('port'));
 
 });
+
+//外部サービス情報を取得(20sごとに取得)
+function getRelayData(){
+    setInterval(function(){
+        var url = 'http://dorakoko.rdy.jp/AllUser.json';
+        http.get(url, function(resp){
+            var body = '';
+            resp.setEncoding('utf8');
+
+            resp.on('data', function(chunk){
+                body += chunk;
+            });
+            resp.on('end', function(resp){
+                if (body.length == 0){
+                    console.log('null');
+                    return;
+                }
+                
+                try{
+                    var latest = JSON.parse(body.slice(1,body.length -1));
+                    var points = latest.points;
+
+                    //位置情報保存
+                    for (var x = 0; x < points.length; x++){
+                        var locinfo = new LocInfo();
+                        locinfo.valid          =  points[x].valid;
+                        locinfo.time           =  new Date;
+                        locinfo.user           =  points[x].user;
+                        locinfo.nickname       =  points[x].nickname;
+                        locinfo.lat            =  points[x].lat;
+                        locinfo.lon            =  points[x].lon;
+                        locinfo.dir            =  points[x].dir;
+                        locinfo.altitude       =  points[x].altitude;
+                        locinfo.velocity       =  points[x].velocity;
+                        locinfo.type           =  points[x].type;
+                        locinfo.flag           = '1';
+                        locinfo.saved          = '0';
+                        locinfo.ustream_status = 'offline';
+                        locinfo.relay_service  = 'dorakoko';
+                        locinfo.location = [parseFloat(points[x].lon), parseFloat(points[x].lat)];
+
+                        locinfo.save(function(err){
+                            if(err){
+                                console.log('err');
+                            }
+                        });
+                    }
+                } catch(e){
+                    console.log('error!!');
+                }
+            });
+        }).on('error', function(e){
+            console.log(e.message); //エラー時
+        });
+    }, 20000);
+
+    //ユーザ名画像作成(60sごとに生成)
+    setInterval(function(){
+        var url = 'http://dorakoko.rdy.jp/AllUser.json';
+        http.get(url, function(resp){
+            var body = '';
+            resp.setEncoding('utf8');
+
+            resp.on('data', function(chunk){
+                body += chunk;
+            });
+            resp.on('end', function(resp){
+                var latest = JSON.parse(body.slice(1,body.length -1));
+                var points = latest.points;
+                
+                for (var x = 0; x < points.length; x++){
+                    //nickname画像生成 todo uid重複チェック
+                    var filename = util.getUserNameImg(points[x].user, points[x].nickname, '#f5f6ce');
+                }
+                //console.log('setDorakokoImg');
+            });
+        }).on('error', function(e){
+            console.log(e.message); //エラー時
+        });
+    }, 60000);
+}
