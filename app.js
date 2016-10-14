@@ -18,8 +18,8 @@ var dbHost = 'localhost';
 var dbName = 'ImacocoDB';
 
 //ろけぽす連携
-var locapos_client_id = '';
-
+var locapos_client_id = 'rkUfa9ey6WFXKa1LtrWzZe4zYllCuxIjh+/1yHG7Omg2hl0r';
+var locapos_redirect_url = 'http://imacoco.589406.com/user';
 
 //モジュール宣言
 require('date-utils');
@@ -33,6 +33,7 @@ var mongoose = require('mongoose');
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
 var geocoder = require('geocoder');
+var locapos = require('locapos');
 
 //Express関係
 var app = express();
@@ -652,7 +653,18 @@ app.get('/user/*.png', function(req, res){
 //ユーザ情報の編集ページを表示
 app.get('/user', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req);
-
+    
+    var locapos_url = '';
+    
+    if (locapos_client_id != '') {
+        locapos_url = 'https://locapos.com/oauth/authorize'
+                    + '?response_type=token'
+                    + '&redirect_uri=' + encodeURIComponent(locapos_redirect_url)
+                    + '&state=' + encodeURIComponent(req.user.userid)
+                    + '&client_id=' + encodeURIComponent(locapos_client_id);
+    }
+    
+    
     UserInfo.findOne(
         {userid : req.user.userid},
         function (err, result) {
@@ -671,6 +683,7 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
                             show          : Boolean(result.show),
                             speed         : Boolean(result.speed),
                             popup         : result.popup,
+                            locapos_url   : locapos_url,
                             locapos_token : result.locapos_token
                            }
                           );
@@ -846,6 +859,15 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
             res.send('OK');
         }
     });
+    
+    //locaposにデータ送信
+    if (req.user.locapos_token != undefined) {
+        var client = new locapos(req.user.locapos_token);
+        client.locations.update(req.body.lat, req.body.lon, req.body.gpsd, {},
+                                function(err,res) {
+                                    if (res) {console.log('ok');}
+                                });
+    }
 });
 
 //現在のユーザー一覧を取得
@@ -962,6 +984,126 @@ app.get('/api/latest', function(req, res){
     );
 });
 
+//近接ユーザの位置情報を取得
+app.get('/api/nearuser', function(req, res){
+    util.setConsolelog(req, ' user:' + req.query.user);
+
+    if (req.query.lat === undefined){
+        res.set('Content-Type', 'text/javascript; charset=utf-8');
+        res.send('({errmsg : "lat is null"})'); 
+        return;
+    }
+
+    if (req.query.lon === undefined){
+        res.set('Content-Type', 'text/javascript; charset=utf-8');
+        res.send('({errmsg : "lon is null"})'); 
+        return;
+    }
+
+    if (req.query.distance === undefined){
+        req.query.distance = 1000;  //1km
+    }
+
+/*
+Building.geoNear(
+    [long, lat], 
+    { maxDistance: 300, spherical: true },
+    function(err, results, stats) {
+        // results is an array of result objects like:
+        // {dis: distance, obj: doc}
+    }
+);
+*/
+
+    //https://www.npmjs.com/package/litecache
+
+    //ユーザ座標
+    var points = [];
+    var req_user = [];
+
+    //ユーザ絞込み
+    switch (req.query.user){
+        case undefined:
+        case 'all':
+            var x ={};
+            req_user.push(x);
+            break;
+        default:
+            var temp = req.query.user.split(',');
+
+            for (var i = 0 ; i < temp.length ; i++){
+                var x ={};
+                x.user = temp[i];
+                req_user.push(x);
+            }
+            break;
+    }
+
+    //現在オンラインのユーザー探す
+    LocInfo.distinct(
+        "user",
+        {$or : req_user,
+         time:{"$gte" : util.addMinutes(new Date, -5)},
+         location : { $nearSphere : 
+                         {$geometry : 
+                             { type : "Point",
+                               coordinates : [parseFloat(req.query.lat), parseFloat(req.query.lon)]
+                             },
+                          $maxDistance : parseFloat(req.query.distance)
+                         }
+                     }
+        },
+        function(err, result){
+            //何かしらのエラー
+            if (err) {
+                var d    = {};
+                d.result = 0;
+                d.errmsg = 'api/nearuser is error.(distinct)';
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')'); 
+                return;
+            }
+
+            //該当ユーザなし
+            if (result.length === 0) {
+                var d    = {};
+                d.result = 1;
+                d.points = points;
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(d) + ')');
+                return;
+            }
+
+            //オンラインユーザの直近の位置を取得
+            for (var i = 0; i < result.length; i++) {
+                LocInfo.find(
+                    {user : result[i],
+                     time : {"$gte" : util.addMinutes(new Date, -5)}
+                    },
+                    {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
+
+                    function(err, results){
+                        points.push(results[0]);
+
+                        if (points.length >= result.length){
+
+                            var d={};
+                            d.result = 1;
+                            d.points = points;
+                            //todo グループ機能やることがあれば対応
+                            //そもそもAPI仕様書に存在しない
+                            //d.group_updated = false;
+
+                            res.set('Content-Type', 'text/javascript; charset=utf-8');
+                            res.send('(' + JSON.stringify(d) + ')');
+                       }
+                    }
+                ).sort({time: -1}).limit(1);
+            }
+        }
+    );
+});
+
 //逆ジオコード変換
 app.get('/api/getaddress', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req);
@@ -982,6 +1124,9 @@ app.get('/api/getaddress.json', passport.authenticate('basic', { session: false 
         if (data.status == 'OK'){
             res.set('text/plain; charset=utf-8');
             res.send('(' + JSON.stringify(data.results[0]) + ')');
+        } else {
+            res.set('text/plain; charset=utf-8');
+            res.send('err');
         }
     }, { language: 'ja' });
 });
