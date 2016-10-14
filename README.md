@@ -49,6 +49,8 @@ $ node app.js
 各クライアントツールとproxyの接続先サーバを自前のものに変えるだけで動きます。素敵！  
 ※googleMap API Key等は各自で用意してください。  
 
+[API仕様書](https://github.com/hamache9821/ImacocoServer/blob/master/docs/api.md)
+
 現時点で実装しているAPI  
 * home/
 * view
