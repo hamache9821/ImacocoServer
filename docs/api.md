@@ -1,10 +1,31 @@
 # 今ココなう（仮）API仕様書
 
 ## 概要
-そのうち書く
+これは今ココなう（仮）のAPI仕様書です。  
+内容は作者の気分によって予告なく変更される可能性があります。  
+
 
 ## ユーザ関係
-そのうち書く
+### GET /api/logintest :lock:
+ > ログインテストを実行します
+
+#### request
+
+#### response
+
+### GET /api/getuserinfo
+ > 指定したユーザーの情報を取得します
+
+#### request
+
+#### response
+
+### GET /api/user_list
+ > アクティブユーザー一覧を取得します
+
+#### request
+
+#### response
 
 
 
@@ -14,7 +35,10 @@
 
  > 位置情報の送信  
 
-||リクエストフォーマット|
+#### request
+
+
+|| |
 |---|---|
 |ContentType|application/x-www-form-urlencoded|  
 
@@ -39,5 +63,25 @@
 |ContentType|text/plain; charset=utf-8|
 |Response Body|成功の場合'OK'、失敗/エラーの場合'NG'|
 
+
+### GET /api/latest
+ > 最新の位置情報を取得します
+
+#### request
+
+
+#### response
+
 #### 備考
-めう
+
+### GET /api/getaddress :lock:
+
+ > 逆ジオコードを行います
+
+#### request
+
+
+#### response
+
+#### 備考
+
