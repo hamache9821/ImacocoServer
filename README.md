@@ -34,13 +34,12 @@ apt-get install libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-esse
 ```
 
 ### 使い方
-こんな感じで動くようにする予定
 
 ```sh
 $ git clone https://github.com/hamache9821/ImacocoServer.git
 $ cd ImacocoServer
 $ npm install
-$ node app.js
+$ npm start
 ```
 （適当にサービスとして登録するためのスクリプトがあったほうがいいかもしれない）  
 
