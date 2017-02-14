@@ -1,13 +1,13 @@
 {
   "name": "Imacoco-server",
-  "version": "0.2.0",
+  "version": "0.3.2",
   "private": true,
   "description": "Compatibility server app for ImakokoNow web service.",
   "homepage": "http://imacoco.589406.com",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "debug": "node-dev app.js"
+    "test" : "node-dev app.js"
   },
   "author": {
     "name": "Hamache9821",
@@ -33,6 +33,7 @@
     "ejs": "*",
     "canvas": "*",
     "mongoose": "*",
+    "config": "*",
     "geocoder": "*",
     "locapos": "*"
   },
