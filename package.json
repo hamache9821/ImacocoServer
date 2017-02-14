@@ -6,8 +6,8 @@
   "homepage": "http://imacoco.589406.com",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "test" : "node-dev app.js"
+    "start": "NODE_ENV=default node app.js",
+    "test" : "NODE_ENV=development node-dev app.js"
   },
   "author": {
     "name": "Hamache9821",
