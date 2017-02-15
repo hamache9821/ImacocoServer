@@ -648,6 +648,10 @@ function isDefined(v, obj) {
 		opacity: 0.9
 	});
 
+    //前後日付
+    $('#link-date-yesterday').html(makeDateString(replayYear, replayMonth , replayDay - 1));
+    $('#link-date-tomorrow').html(makeDateString(replayYear, replayMonth , replayDay + 1));
+
 	// ローディング中のオーバーレイ
 	loadingOverlay.open(function(){
 		$(window).load(function(){
@@ -938,5 +942,25 @@ function isDefined(v, obj) {
 		}
 
 		return '<span id="clock-date">' + myYear + '年' + myMonth + '月' + myDate + '日' + '</span><span id="clock-time"><span class="digit">' + myHour + '</span>時<span class="digit">' + myMin + '</span>分</span>';
+	}
+
+	// 日付文字列作成
+	function makeDateString(year, month, day) {
+		var dt = new Date(year, month - 1, day);
+        var today = new Date();
+
+        var s = ('0000' + dt.getFullYear()).slice(-4)
+              + ('00' + (dt.getMonth()+1)).slice(-2)
+              + ('00' + dt.getDate()).slice(-2);
+
+        var ss = ('0000' + today.getFullYear()).slice(-4)
+               + ('00' + (today.getMonth()+1)).slice(-2)
+               + ('00' + today.getDate()).slice(-2);
+
+        if (parseInt(s) > parseInt(ss)) {
+            return '&nbsp;';
+        } else {
+            return '<a href="' + s + '">' + s + '</a>';
+	    }
 	}
 });

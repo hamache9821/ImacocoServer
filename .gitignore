@@ -35,6 +35,9 @@ node_modules
 # img cache directory
 wui/img/user
 
+# replay data directory
+wui/json
+
 # develop config file
 config/development.json
 

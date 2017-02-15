@@ -7,7 +7,7 @@
 <link rel="shortcut icon" href="/img/favicon.ico" type="image/vnd.microsoft.icon" />
 <link rel="icon" href="/img/favicon.ico" type="image/vnd.microsoft.icon" />
 <title>今ココ！リプレイ（仮） - <%= today %></title>
-<link rel="canonical" href="/date/20160304" />
+<link rel="canonical" href="/date/20150104" />
 <link rel="stylesheet" type="text/css" href="/css/replay.css?20111024" />
 <link rel="stylesheet" type="text/css" href="/css/pepper-grinder/jquery-ui-1.7.2.custom.css" />
 </head>
@@ -32,8 +32,10 @@
 
 <!-- link-date -->
 <div id="link-date">
-<div id="link-date-yesterday" class="ui-corner-bl" title="前の日"><a href="./date/<%= yesterday %>"><%= yesterday %></a></div><div id="link-date-top" title="トップページへ"><a href="/">TOP</a></div><div id="link-date-tomorrow" class="ui-corner-br">&nbsp;</div></div>
-
+<div id="link-date-yesterday" class="ui-corner-bl" title="前の日"></div>
+<div id="link-date-top" title="トップページへ"><a href="/">TOP</a></div>
+<div id="link-date-tomorrow" class="ui-corner-br" title="次の日"></div>
+</div>
 <!-- control -->
 <div id="control" class="ui-corner-all">
 <div id="control-panel">
@@ -50,7 +52,7 @@
 
 </div>
 
-<script src="//maps.google.com/maps/api/js?sensor=false"></script>
+<script src="//maps.google.com/maps/api/js?key=<%= api_key %>"></script>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
 <script>window.jQuery || document.write('<script src="/js/jquery-1.3.2.min.js"><\/script>')</script>
 <script src="/static/jquery-ui-1.7.2.custom.min.js"></script>
@@ -63,10 +65,10 @@
 	var user_list = [ 'all' ];
 	var trace_user = '__nouser__';
 
-	var replayDate =  20160304;
-	var replayYear = 2016;
-	var replayMonth = 3;
-	var replayDay = 4;
+	var replayDate  = <%= today %>;
+	var replayYear  = <%= today.slice(0,4) %>;
+	var replayMonth = <%= today.slice(4,6) %>;
+	var replayDay   = <%= today.slice(6) %>;
 	var replayLocate = 0;
 	var replayPlay = 0;
 	var replaySpeed = 7;
