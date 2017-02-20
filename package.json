@@ -1,6 +1,6 @@
 {
   "name": "Imacoco-server",
-  "version": "0.3.2",
+  "version": "0.3.5",
   "private": true,
   "description": "Compatibility server app for ImakokoNow web service.",
   "homepage": "http://imacoco.589406.com",

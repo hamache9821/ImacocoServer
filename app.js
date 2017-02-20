@@ -31,9 +31,11 @@ const util = require('./lib/common-utils.js')
     , compression = require('compression')
     , config = require('config');
 
+
 //グローバル変数
 global.latest = {};
 global.user_list = {};
+
 
 //必須設定チェック
 if (!config.dbHost) {throw 'config `dbHost` is not set';}
@@ -152,7 +154,7 @@ getUserList()
 //test API
 app.get('/api/test', function(req, res){
     util.setConsolelog(req,'');
-    res.send('OK');
+    res.send('OK'+ util.getHash( '0000'));
 });
 
 //今ココリプレイ
@@ -178,8 +180,9 @@ app.get('/replay/date/*', function(req, res){
     }
 
     res.render('replay',
-               {api_key   : config.googlemap_api_key,
-                today     : day
+               {service_name : config.service_name,
+                api_key      : config.googlemap_api_key,
+                today        : day
                 }
               );
 });
@@ -189,7 +192,7 @@ app.get('/gpslive', function(req, res){
     util.setConsolelog(req);
 
     res.render('gpslive',
-               {}
+               {service_name : config.service_name}
               );
 });
 
@@ -290,7 +293,8 @@ app.get('/view', function(req, res){
 
     //todo　センサとマップタイプ
     res.render('index',
-               {title       : title,
+               {service_name: config.service_name,
+                title       : title,
                 user        : JSON.stringify(req.query.user),
                 trace_user  : req.query.trace,
                 region      : JSON.stringify(region),
@@ -328,7 +332,8 @@ app.get('/home/*', function(req, res){
                 var username = result.nickname + '(' + userid + ')';
 
                 res.render('userhome',
-                           {userid      : userid,
+                           {service_name: config.service_name,
+                            userid      : userid,
                             nickname    : result.nickname,
                             username    : username,
                             twitter     : result.twitter,
@@ -346,7 +351,7 @@ app.get('/create_user', function(req, res){
     util.setConsolelog(req);
 
     res.render('create_user',
-               {}
+               {service_name: config.service_name}
               );
 });
 
@@ -474,7 +479,8 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
                 res.status(404).send('Sorry, we cannot find that!');
             } else {
                 res.render('user',
-                           {userid        : req.user.userid,
+                           {service_name  : config.service_name,
+                            userid        : req.user.userid,
                             nickname      : result.nickname,
                             twitter       : result.twitter,
                             ust           : result.ust,
@@ -943,12 +949,132 @@ app.get('/api/logintest', passport.authenticate('basic', { session: false }), fu
     res.send('OK');
 });
 
+
+//リプレイ用データ作成
+app.get('/api/replay/latest/*', function(req, res){
+    util.setConsolelog(req);
+    var day = '';
+
+    try{
+         day = req.url.split('/')[4].replace('.json','');
+    } catch(e){
+        console.log('error!!');
+    }
+
+    //日付を簡易チェックしてだめなら当日を入れる
+    if (!/^[0-9]{12}$/.test(day)) {
+        day = new Date().toFormat("YYYYMMDDHH24MI");
+    }
+
+    var d1 = new Date(day.slice(0,4),parseInt(day.slice(4,6)) -1, day.slice(6,8),day.slice(8,10),day.slice(10),0);
+    var d2 = new Date(d1.getTime() +  60000 -1);
+
+    //ユーザ座標
+    var points = [];
+    var latest = {};
+
+    //現在オンラインのユーザー探す
+    LocInfo.distinct(
+        "user",
+        { time : { "$gte" : d1, "$lte" : d2}},
+        function(err, result){
+            //何かしらのエラー
+            if (err) {
+                latest.result = 0;
+                latest.errmsg = 'api/latest is error.(distinct)';
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send(JSON.stringify(latest) ); 
+                return;
+            }
+
+            //該当ユーザなし
+            if (result.length === 0) {
+                latest.result = 1;
+                latest.points = points;
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send(JSON.stringify(latest) ); 
+                return;
+            }
+
+            //オンラインユーザの直近の位置を取得
+            for (var i = 0; i < result.length; i++) {
+                LocInfo.find(
+                    {user : result[i], time : { "$gte" : d1, "$lte" : d2}},
+                    {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
+
+                    function(err, results){
+                        points.push(results[0]);
+
+                        if (points.length >= result.length){
+                            latest.result = 1;
+                            latest.points = points;
+
+                            res.set('Content-Type', 'text/javascript; charset=utf-8');
+                            res.send(JSON.stringify(latest) ); 
+                       }
+                    }
+                ).sort({time: -1}).limit(1);
+            }
+        }
+    );
+});
+
+
+//リプレイ用ニックネーム作成
+app.get('/api/replay/nickname/*', function(req, res){
+    util.setConsolelog(req);
+    var day = '';
+
+    try{
+         day = req.url.split('/')[4].replace('.json','');
+    } catch(e){
+        console.log('error!!');
+    }
+
+    //日付を簡易チェックしてだめなら当日を入れる
+    if (!/^[0-9]{8}$/.test(day)) {
+        day = new Date().toFormat("YYYYMMDD");
+    }
+
+    var d1 = new Date(day.slice(0,4), parseInt(day.slice(4,6)) -1, day.slice(6,8), 0, 0, 0);
+    var d2 = new Date(day.slice(0,4), parseInt(day.slice(4,6)) -1, day.slice(6,8), 23, 59, 59);
+
+    LocInfo.aggregate(
+        {$match : {time : {"$gte" : d1, "$lte" : d2}}},
+        {$group : {_id  : {user : "$user",
+                           nickname  : "$nickname"
+                          }
+                  }
+        },
+        function (err, result){
+            if (err) {
+                console.log(err);
+            } else {
+                var _res = {};
+
+                for (var i = 0; i < result.length; i++) {
+                    var ary={};
+                    ary.nickname = result[i]['_id'].nickname;
+                    ary.nickicon =  util.getMD5Hash(result[i]['_id'].nickname);
+
+                    var filename = util.getUserNameImg(ary.nickicon, ary.nickname, '#ffffff');
+
+                    _res[result[i]['_id'].user]= ary;
+                }
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send(JSON.stringify(_res)); 
+            }
+        }
+    );
+});
+
 //サーバー起動
 http.createServer(app).listen(app.get('port'), function(){
   console.log('[INFO] ImacocoNow server listening on port: ' + app.get('port'));
 //  console.log('['+ cyan +'INFO' + reset + '] ImacocoNow server listening on port: ' + app.get('port'));
 
 });
+
 
 //===============共通処理 ===============
 /* 指定したユーザーの情報を取得
@@ -994,6 +1120,7 @@ function getuserinfo(req, res) {
         );
     }
 }
+
 
 /* 最新の位置情報を取得（タイマ処理）
     呼出元：
@@ -1046,6 +1173,7 @@ function getLatest(){
         );
     }, config.latest_refresh_time);
 }
+
 
 /* 現在のユーザー一覧を取得
     呼出元：
@@ -1170,220 +1298,3 @@ function getRelayData(){
         });
     }, config.relay_service_refresh_time2);
 }
-
-
-/*
-    //todo リプレイデータ生成
-    //タイマ処理なりcronなりで作るようにする。別ファイル化も検討
-
-//そのうち
-//今ココリプレイ用
-app.get('/api/json/*.json', function(req, res){
-    util.setConsolelog(req);
-    res.status(404).send('Sorry, we cannot find that!');
-    return;
-
-    var day =req.url.split('/')[3].replace('.json','');
-    //http://momentjs.com/timezone/
-    //http://qiita.com/masato/items/32464b45c78962cb5831
-    
-    
-    util.inspect(day);
-
-    var gt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2),  0,  0,  0,0);
-    var lt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2), 23, 59, 59,0);
-
-//    util.inspect(gt_date);
-  //  util.inspect(lt_date);
-
-    /api/latestの処理をベースに一日分抽出したらできそうだけど、負荷を考えないと
-    //リアルタイム集計はさすがに負荷が高すぎるので、バッチ処理で専用テーブル持ったほうがよさげ
-
-    /
-    db.locinfos.distinct("user",
-        {time:{"$gte" : ISODate("2016-03-04T00:00:00Z"), "$lte" : ISODate("2016-03-04T23:59:59Z")}}
-    );
-
-    //その日のユーザー数*1440回のループとかちょっとアレ
-    db.locinfos.find(
-        {time:{"$gte" : ISODate("2016-02-24T01:49:00Z"), "$lte" : ISODate("2016-02-24T01:49:59Z")}},
-        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0}
-    ).sort({time: -1}).limit(1);
-
-    //ユーザ座標
-    var points = [];
-    var day_points = [];
-
-    //現在オンラインのユーザー探す
-    LocInfo.distinct(
-        "user",
-        {time:{"$gte" : gt_date, "$lte" : lt_date}},
-        function(err, result){
-            //何かしらのエラー
-            if (err) {
-                var d    = {};
-                d.result = 0;
-                d.errmsg = 'api/json is error.(distinct)';
-                res.set('Content-Type', 'text/javascript; charset=utf-8');
-                res.send('(' + JSON.stringify(d) + ')'); 
-                return;
-            }
-            //該当ユーザなし
-            if (result.length === 0) {
-                var d    = {};
-                d.result = 1;
-                d.points = points;
-                res.set('Content-Type', 'text/javascript; charset=utf-8');
-                res.send('(' + JSON.stringify(d) + ')');
-                return;
-            }
-
-            for (var x = 0; x < 1440; x++) {
-util.inspect(x);
-
-                //オンラインユーザの直近の位置を取得
-                for (var i = 0; i < result.length; i++) {
-                    console.log(x + ':' + result[i] );
-
-                    LocInfo.find(
-                        {user : result[i], time:{"$gt" : util.addMinutes(gt_date, x), "$lt" : util.addMinutes(gt_date, x + 1)}},
-                        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0},
-
-                        function(err, results){
-                            if (results[0] != undefined){
-                                points.push(results[0]);
-//                                util.inspect(results[0]);
-                            }
-                            if (points.length >= result.length){
-
-                                var d={};
-                                d.result = 1;
-                                d.points = points;
-                                
-                                day_points.push(d);
-//                                util.inspect(day_points);
-
-                              //  res.set('Content-Type', 'text/javascript; charset=utf-8');
-                              //  res.send('(' + JSON.stringify(d) + ')');
-                           }
-                           
-                        }
-                    ).sort({time: -1}).limit(1);
-                    
-
-
-                }
-            // util.inspect(day_points);
-             
-            }
-            res.set('Content-Type', 'text/javascript; charset=utf-8');
-            res.send('(' + JSON.stringify(day_points) + ')');
-        }
-    );
-});
-
-
-//今ココリプレイ用
-app.get('/api/json2/*.json', function(req, res){
-    util.setConsolelog(req);
-    res.status(404).send('Sorry, we cannot find that!');
-
-    var day =req.url.split('/')[3].replace('.json','');
-    //http://momentjs.com/timezone/
-    //http://qiita.com/masato/items/32464b45c78962cb5831
-    
-    //todo static file にしたほうが負荷減る？
-    util.inspect(day);
-    var s = new Date(1331209044000).toISOString();
-
-    var gt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2),  0,  0,  0,0);
-    var lt_date = new Date(day.substr(0, 4), day.substr(4, 2) - 1, day.substr(6, 2), 23, 59, 59,0);
-
-    // /api/latestの処理をベースに一日分抽出したらできそうだけど、負荷を考えないと
-    //リアルタイム集計はさすがに負荷が高すぎるので、バッチ処理で専用テーブル持ったほうがよさげ
-
-    /
-    db.locinfos.distinct("user",
-        {time:{"$gte" : ISODate("2016-03-04T00:00:00Z"), "$lte" : ISODate("2016-03-04T23:59:59Z")}}
-    );
-
-    //その日のユーザー数*1440回のループとかちょっとアレ
-    db.locinfos.find(
-        {time:{"$gte" : ISODate("2016-02-24T01:49:00Z"), "$lte" : ISODate("2016-02-24T01:49:59Z")}},
-        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0}
-    ).sort({time: -1}).limit(1);
-
-    //ユーザ座標
-    var points = [];
-    var day_points = [];
-
-    //現在オンラインのユーザー探す
-    LocInfo.distinct(
-        "user",
-        {time:{"$gte" : gt_date, "$lte" : lt_date}},
-        function(err, result){
-            //何かしらのエラー
-            if (err) {
-                var d    = {};
-                d.result = 0;
-                d.errmsg = 'api/json is error.(distinct)';
-                res.set('Content-Type', 'text/javascript; charset=utf-8');
-                res.send('(' + JSON.stringify(d) + ')'); 
-                return;
-            }
-            //該当ユーザなし
-            if (result.length === 0) {
-                var d    = {};
-                d.result = 1;
-                d.points = points;
-                res.set('Content-Type', 'text/javascript; charset=utf-8');
-                res.send('(' + JSON.stringify(d) + ')');
-                return;
-            }
-
-            for (var x = 0; x < 1440; x++) {
-//util.inspect(x);
-
-                //オンラインユーザの直近の位置を取得
-                for (var i = 0; i < result.length; i++) {
-//                    console.log(x + ':' + result[i] );
-
-                    LocInfo.find(
-                        {user : result[i], time:{"$gt" : util.addMinutes(gt_date, x), "$lt" : util.addMinutes(gt_date, x + 1)}},
-                        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0},
-
-                        function(err, results){
-                            if (results[0] != undefined){
-                                points.push(results[0]);
-//                                util.inspect(results[0]);
-                            }
-                            if (points.length >= result.length){
-
-                                var d={};
-                                d.result = 1;
-                                d.points = points;
-                                
-                                day_points.push(d);
-//                                util.inspect(day_points);
-
-                              //  res.set('Content-Type', 'text/javascript; charset=utf-8');
-                              //  res.send('(' + JSON.stringify(d) + ')');
-                           }
-                           
-                        }
-                    ).sort({time: -1}).limit(1);
-                    
-
-
-                }
-            // util.inspect(day_points);
-             
-            }
-            res.set('Content-Type', 'text/javascript; charset=utf-8');
-            res.send('(' + JSON.stringify(day_points) + ')');
-        }
-    );
-
-});
-*/
-
