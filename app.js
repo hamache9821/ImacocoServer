@@ -137,8 +137,22 @@ passport.use(new BasicStrategy(
 ));
 
 //--------- 全体向け -----------
+//アクセス制限フィルター
+app.use(function(req, res, next){
+    //リプレイ作成用urlはlocalhost以外からはアクセスさせない
+    if (/^\/api\/replay\/.*/.test(req.url) && !/^localhost/.test(req.headers.host)){
+        console.log('[\u001b[33mWARN\u001b[0m] Unauthorized access ' + req.url + '');
+        res.status(418).send('Cannot GET ' + req.url);
+        return;
+    } else {
+        next();
+    }
+});
+
+
 //静的なファイルのルーティング
 app.use(express.static('wui'));
+
 
 //外部サービスデータ取得
 if (config.use_relay_service) {
@@ -151,17 +165,20 @@ getLatest();
 //ユーザ情報取得タイマ
 getUserList()
 
+
 //test API
 app.get('/api/test', function(req, res){
     util.setConsolelog(req,'');
     res.send('OK'+ util.getHash( '0000'));
 });
 
+
 //今ココリプレイ
 app.get('/replay', function(req, res){
     util.setConsolelog(req);
     res.redirect(301, '/replay/date/' + new Date().toFormat("YYYYMMDD") );
 });
+
 
 //今ココリプレイ
 app.get('/replay/date/*', function(req, res){
@@ -187,6 +204,7 @@ app.get('/replay/date/*', function(req, res){
               );
 });
 
+
 // todo: GPS Live Tracking をv3に移植する
 app.get('/gpslive', function(req, res){
     util.setConsolelog(req);
@@ -196,11 +214,13 @@ app.get('/gpslive', function(req, res){
               );
 });
 
+
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
     util.setConsolelog(req);
     res.redirect(301, '/view');
 });
+
 
 //地図上で指定したユーザーの位置を表示するHTMLを出力
 app.get('/view', function(req, res){

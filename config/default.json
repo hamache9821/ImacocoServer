@@ -8,8 +8,8 @@
     "locapos_client_id"     : "",
     "locapos_redirect_url"  : "",
     "latest_refresh_time"   : 2000,
-    "use_relay_service"     : true,
-    "relay_service_url1"    : "http://dorakoko.rdy.jp/AllUser.json",
+    "use_relay_service"     : false,
+    "relay_service_url1"    : "http://example.com/api/latest",
     "relay_service_refresh_time1" : 20000,
     "relay_service_refresh_time2" : 60000
 }
