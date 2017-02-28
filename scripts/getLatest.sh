@@ -2,22 +2,30 @@
 
 url1='http://localhost/api/replay/latest/'
 url2='http://localhost/api/replay/nickname/'
-saveto='../wui/json/2017/'
-
+saveto='../wui/json/'
 latest=''
 
+#処理日付チェック
 if [ $# -ne 1 ]; then
-    echo "日付を指定してください。(YYYYMMDD)" 1>&2
-    exit 1
+    DATE0=`date -d "1 day ago" +%Y%m%d`
+else
+    DATE0=$1
 fi
 
 #処理対象日付
-DATE1=`date --date "$1" +%s`
+DATE1=`date --date "$DATE0" +%s`
+
+#保存先チェック
+saveto="$saveto"`date --date "$DATE0" +%Y`"/"
+
+if [ ! -e $saveto ]; then
+    mkdir $saveto
+fi
 
 #1分単位で処理
-for i in `seq 0 1439`
+for n in `seq 0 1439`
 do
-    DATE2=$((DATE1 + (i * 60)))
+    DATE2=$((DATE1 + (n * 60)))
 
     tmp="$url1"`date -d @"$DATE2" +%Y%m%d%H%M`
 #    echo "$tmp"
@@ -29,6 +37,9 @@ do
     #json本体
     latest="${latest}"`curl -s $tmp` 
 done
-echo "[$latest]" >$saveto$1.json
 
-curl -s $url2$1 > $saveto$1-nickname.json
+#latest.json
+echo "[$latest]" > $saveto$DATE0.json
+
+#nickname.json
+curl -s $url2$DATE0 > $saveto$DATE0-nickname.json
