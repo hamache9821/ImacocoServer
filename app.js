@@ -10,8 +10,17 @@
 //api仕様
 //http://www.imacoconow.net/api.html
 
-//todo log4jsあたり検討
-//todo 括り文字の使い分け ex node:'' mongo:""
+//括り文字の使い分け ex node:'' mongo:""
+
+const config = require('config');
+
+//必須設定チェック
+if (!config.dbHost) {throw 'config `dbHost` is not set';}
+if (!config.dbName) {throw 'config `dbName` is not set';}
+if (!config.googlemap_api_key) {
+    console.log('[\u001b[33mWARN\u001b[0m] config `googlemap_api_key` is not set');
+}
+
 
 //モジュール宣言
 require('date-utils');
@@ -23,26 +32,21 @@ const util = require('./lib/common-utils.js')
     , app = express()
     , domain = require('express-domain-middleware')
     , bodyParser = require('body-parser')
-    , mongoose = require('mongoose')
+//    , mongoose = require('mongoose')
     , passport = require('passport')
     , BasicStrategy = require('passport-http').BasicStrategy
     , geocoder = require('geocoder')
     , locapos = require('locapos')
     , compression = require('compression')
-    , config = require('config');
+    , db2 = require('./lib/db.js');
 
 
 //グローバル変数
 global.latest = {};
 global.user_list = {};
 
+//console.log(db2.UserInfo);
 
-//必須設定チェック
-if (!config.dbHost) {throw 'config `dbHost` is not set';}
-if (!config.dbName) {throw 'config `dbName` is not set';}
-if (!config.googlemap_api_key) {
-    console.log('[\u001b[33mWARN\u001b[0m] config `googlemap_api_key` is not set');
-}
 
 //Express関係
 app.use(compression());
@@ -55,7 +59,9 @@ app.set('port', config.port || 80);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
+
 //--------- MongoDB設定 -----------
+/*
 mongoose.Promise = global.Promise;
 const db = mongoose.createConnection('mongodb://' + config.dbHost + '/' + config.dbName, function(error, res){});
 
@@ -96,6 +102,7 @@ const LocSchema = new mongoose.Schema({
     relay_service  : {type: String},
     location       : {type: Array}
 });
+*/
 
 //todo グループ管理モデル
 //http://yone-public.blogspot.jp/2012/11/mongoose1.html
@@ -112,15 +119,17 @@ const LocSchema = new mongoose.Schema({
 */
 
 //DB定義
-var UserInfo = db.model('User', UserSchema);
-var LocInfo  = db.model('Locinfo', LocSchema);
+//var UserInfo = db.model('User', UserSchema);
+//var LocInfo  = db.model('Locinfo', LocSchema);
+
+
 
 //認証ロジック
 //互換性維持のためにbasic認証
 passport.use(new BasicStrategy(
     function(userid, password, done) {
         process.nextTick(function(){
-            UserInfo.findOne({ userid: userid }, function (err, user) {
+            db2.UserInfo.findOne({ userid: userid }, function (err, user) {
               if (err) {
                   return done(err);
               }
@@ -343,7 +352,7 @@ app.get('/home/*', function(req, res){
         return;
     }
 
-    UserInfo.findOne(
+    db2.UserInfo.findOne(
         {userid : userid},
         function (err, result) {
             if (err || result === null) {
@@ -397,7 +406,7 @@ app.post('/create_user', function(req, res){
         res.send('(' + JSON.stringify(d) + ')'); 
 
     } else {
-        UserInfo.findOne(
+        db2.UserInfo.findOne(
             {email : req.body.email},
             function (err, result) {
                 var d={};
@@ -408,7 +417,7 @@ app.post('/create_user', function(req, res){
                     res.set('Content-Type', 'text/javascript; charset=utf-8');
                     res.send('(' + JSON.stringify(d) + ')'); 
                 } else if (result === null){
-                    UserInfo.findOne(
+                    db2.UserInfo.findOne(
                         {userid : req.body.username},
                         function (err, result) {
                             if (err && result === null) {
@@ -421,7 +430,7 @@ app.post('/create_user', function(req, res){
                                 }
 
                                 //ユーザー作成
-                                var _User = new UserInfo();
+                                var _User = new db2.UserInfo();
                                 _User.userid   = req.body.username;
                                 _User.nickname = req.body.nickname;
                                 _User.password = util.getHash(req.body.password);
@@ -492,7 +501,7 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
                     + '&client_id='    + encodeURIComponent(config.locapos_client_id);
     }
 
-    UserInfo.findOne(
+    db2.UserInfo.findOne(
         {userid : req.user.userid},
         function (err, result) {
             if (err || result === null) {
@@ -547,7 +556,7 @@ app.post('/user/update_userinfo', passport.authenticate('basic', { session: fals
     //todo locapos_valid
 
     //ユーザデータ更新処理
-    UserInfo.update(
+    db2.UserInfo.update(
         {userid : req.user.userid},
         {$set : { password      : passwd,
                   nickname      : req.body.nickname,
@@ -619,7 +628,7 @@ app.get('/user/getuserinfo', function(req, res){
 app.post('/api/post', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req, req.user.userid + ' ' + req.body.time);
 
-    var locinfo = new LocInfo();
+    var locinfo = new db2.LocInfo();
     locinfo.valid          = true;
     locinfo.time           = req.body.time;
     locinfo.user           = req.user.userid;
@@ -751,7 +760,7 @@ Building.geoNear(
     }
 
     //現在オンラインのユーザー探す
-    LocInfo.distinct(
+    db2.LocInfo.distinct(
         "user",
         {$or : req_user,
          time:{"$gte" : util.addMinutes(new Date, -5)},
@@ -788,7 +797,7 @@ Building.geoNear(
 
             //オンラインユーザの直近の位置を取得
             for (var i = 0; i < result.length; i++) {
-                LocInfo.find(
+                db2.LocInfo.find(
                     {user : result[i],
                      time : {"$gte" : util.addMinutes(new Date, -5)}
                     },
@@ -994,7 +1003,7 @@ app.get('/api/replay/latest/*', function(req, res){
     var latest = {};
 
     //現在オンラインのユーザー探す
-    LocInfo.distinct(
+    db2.LocInfo.distinct(
         "user",
         { time : { "$gte" : d1, "$lte" : d2}},
         function(err, result){
@@ -1018,7 +1027,7 @@ app.get('/api/replay/latest/*', function(req, res){
 
             //オンラインユーザの直近の位置を取得
             for (var i = 0; i < result.length; i++) {
-                LocInfo.find(
+                db2.LocInfo.find(
                     {user : result[i], time : { "$gte" : d1, "$lte" : d2}},
                     {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
 
@@ -1059,7 +1068,7 @@ app.get('/api/replay/nickname/*', function(req, res){
     var d1 = new Date(day.slice(0,4), parseInt(day.slice(4,6)) -1, day.slice(6,8), 0, 0, 0);
     var d2 = new Date(day.slice(0,4), parseInt(day.slice(4,6)) -1, day.slice(6,8), 23, 59, 59);
 
-    LocInfo.aggregate(
+    db2.LocInfo.aggregate(
         {$match : {time : {"$gte" : d1, "$lte" : d2}}},
         {$group : {_id  : {user : "$user",
                            nickname  : "$nickname"
@@ -1114,7 +1123,8 @@ function getuserinfo(req, res) {
         res.send('(' + JSON.stringify(d) + ')'); 
 
     } else {
-        UserInfo.findOne(
+console.log('db2');
+        db2.UserInfo.findOne(
             {userid : req.query.user},
             function (err, result) {
                 var d={};
@@ -1152,7 +1162,7 @@ function getLatest(){
         var points = [];
 
         //現在オンラインのユーザー探す
-        LocInfo.distinct(
+        db2.LocInfo.distinct(
             "user",
             { time:{"$gte" : util.addMinutes(new Date, -5)}},
             function(err, result){
@@ -1172,7 +1182,7 @@ function getLatest(){
 
                 //オンラインユーザの直近の位置を取得
                 for (var i = 0; i < result.length; i++) {
-                    LocInfo.find(
+                    db2.LocInfo.find(
                         {user : result[i], time:{"$gte" : util.addMinutes(new Date, -5)}},
                         {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
 
@@ -1202,7 +1212,7 @@ function getLatest(){
 function getUserList(){
     setInterval(function(){
         //直近5分以内にデータ送信のあったユーザをアクティブとする
-        LocInfo.aggregate(
+        db2.LocInfo.aggregate(
             {$match : {time : {"$gte" : util.addMinutes(new Date, -5)}}},
             {$group : {_id  : {valid : "$valid",
                                user  : "$user"
@@ -1252,7 +1262,7 @@ function getRelayData(){
 
                     //位置情報保存
                     for (var x = 0; x < points.length; x++){
-                        var locinfo = new LocInfo();
+                        var locinfo = new db2.LocInfo();
                         locinfo.valid          =  points[x].valid;
                         locinfo.time           =  new Date;
                         locinfo.user           =  points[x].user;
