@@ -134,13 +134,6 @@ function wait() {
 // 更新処理
 function update() {
 	// 位置情報を取得する
-/*
-	$.getJSON('/api/latest',
-		{
-			t : new Date().getTime()
-		},
-		function(json) {
-*/
 	if(replayLocate == 1440) {
 		return false;
 	} else if(lastReplayLocate == replayLocate) {
@@ -390,10 +383,6 @@ function update() {
 			}
 		}
 	}
-/*
-		}
-	);
-*/
 }
 
 //現在地アイコンの作成（CSS Spriteを使う）
@@ -511,14 +500,6 @@ function makeStreamMarker(stream, pt) {
 //ユーザー情報を初期化
 function initUser(username, flag) {
 	if (username) {
-/*
-		var nick_icon = new google.maps.MarkerImage(
-			'http://www.fujita-lab.com/imakoko/user/' + encodeURIComponent(username) + '.png',
-			null,
-			null,
-			new google.maps.Point(0, 24)
-		);
-*/
 		var plot_path = new google.maps.Polyline({
 			strokeColor: '#FF0000',
 			strokeOpacity: 0.8,
@@ -627,11 +608,9 @@ function isDefined(v, obj) {
 	return ret;
 }
 
-
 /*
  * replay 追加
  */
-
 	var mousedownFlag = false;
 	var clockDisplayFlag = true;
 	var controlDisplayFlag = true;

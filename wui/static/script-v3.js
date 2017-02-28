@@ -320,13 +320,6 @@ function initialize() {
 			mapLoadedFlag = true;
 		}
 	});
-    
-/*
-    //
-	$.getJSON('/api/test/initUser',
-		{},function(json){}
-	);
-*/
 }
 
 // 更新処理
@@ -340,19 +333,6 @@ function update() {
             updateMap(json);
         }
 	);
-
-/*
-    //ド○ココの情報を取得する
-	$.getJSON('/api/latest2',
-		{
-			t : new Date().getTime()
-		},
-		function(json){
-            updateMap(json, true);
-        }
-	);
-*/
-
 }
 
 //位置情報を描画
