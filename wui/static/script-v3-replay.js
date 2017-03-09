@@ -177,10 +177,8 @@ function update() {
 		// 全員分ループ
 		for ( var i = 0; i < json.points.length; i++) {
 			var data = json.points[i];
-
 			// ユーザーID
 			var username = data.user;
-
 			// ユーザーが定義されてない場合は、ユーザーを初期化
 			if (!isDefined(username, 'users')) {
 				// 表示するユーサーにフラグを付ける

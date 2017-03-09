@@ -26,26 +26,24 @@ if (!config.googlemap_api_key) {
 require('date-utils');
 
 const util = require('./lib/common-utils.js')
+    , packageinfo = require('./package.json')
     , fs = require('fs')
     , http = require('http')
     , express = require('express')
     , app = express()
     , domain = require('express-domain-middleware')
     , bodyParser = require('body-parser')
-//    , mongoose = require('mongoose')
     , passport = require('passport')
     , BasicStrategy = require('passport-http').BasicStrategy
     , geocoder = require('geocoder')
     , locapos = require('locapos')
     , compression = require('compression')
-    , db2 = require('./lib/db.js');
+    , db = require('./lib/db.js');
 
 
 //グローバル変数
 global.latest = {};
 global.user_list = {};
-
-//console.log(db2.UserInfo);
 
 
 //Express関係
@@ -60,76 +58,12 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
 
-//--------- MongoDB設定 -----------
-/*
-mongoose.Promise = global.Promise;
-const db = mongoose.createConnection('mongodb://' + config.dbHost + '/' + config.dbName, function(error, res){});
-
-//ユーザ認証モデル
-const UserSchema = new mongoose.Schema({
-    userid        : {type: String, required: true},
-    password      : {type: String, required: true},
-    email         : {type: String, required: true},
-    nickname      : {type: String, required: true},
-    ust           : {type: String},
-    jtv           : {type: String},
-    nicolive      : {type: String},
-    show          : {type: String},
-    web           : {type: String},
-    description   : {type: String},
-    popup         : {type: String},
-    speed         : {type: String},
-    twitter       : {type: String},
-    locapos_token : {type: String},
-    locapos_valid : {type: Boolean}
-});
-
-//位置情報保持モデル
-const LocSchema = new mongoose.Schema({
-    valid          : {type: Boolean, required: true},
-    time           : {type: Date,    required: true},
-    user           : {type: String,  required: true},
-    nickname       : {type: String},
-    lat            : {type: Number},
-    lon            : {type: Number},
-    dir            : {type: Number},
-    altitude       : {type: Number},
-    velocity       : {type: Number},
-    type           : {type: String},
-    flag           : {type: String},
-    ustream_status : {type: String},
-    saved          : {type: String},
-    relay_service  : {type: String},
-    location       : {type: Array}
-});
-*/
-
-//todo グループ管理モデル
-//http://yone-public.blogspot.jp/2012/11/mongoose1.html
-/* 構造案
-    groupname  
-    users      
-    description
-    marker:{{   desc
-                lat
-                lon
-                _id
-            }
-           }
-*/
-
-//DB定義
-//var UserInfo = db.model('User', UserSchema);
-//var LocInfo  = db.model('Locinfo', LocSchema);
-
-
-
 //認証ロジック
 //互換性維持のためにbasic認証
 passport.use(new BasicStrategy(
     function(userid, password, done) {
         process.nextTick(function(){
-            db2.UserInfo.findOne({ userid: userid }, function (err, user) {
+            db.UserInfo.findOne({ userid: userid }, function (err, user) {
               if (err) {
                   return done(err);
               }
@@ -173,6 +107,13 @@ getLatest();
 
 //ユーザ情報取得タイマ
 getUserList()
+
+
+//systeminfo
+app.get('/api/systeminfo', function(req, res){
+    var s = packageinfo.name + '(' + packageinfo.version + ')\n';
+    res.send(s);
+});
 
 
 //test API
@@ -352,7 +293,7 @@ app.get('/home/*', function(req, res){
         return;
     }
 
-    db2.UserInfo.findOne(
+    db.UserInfo.findOne(
         {userid : userid},
         function (err, result) {
             if (err || result === null) {
@@ -406,7 +347,7 @@ app.post('/create_user', function(req, res){
         res.send('(' + JSON.stringify(d) + ')'); 
 
     } else {
-        db2.UserInfo.findOne(
+        db.UserInfo.findOne(
             {email : req.body.email},
             function (err, result) {
                 var d={};
@@ -417,7 +358,7 @@ app.post('/create_user', function(req, res){
                     res.set('Content-Type', 'text/javascript; charset=utf-8');
                     res.send('(' + JSON.stringify(d) + ')'); 
                 } else if (result === null){
-                    db2.UserInfo.findOne(
+                    db.UserInfo.findOne(
                         {userid : req.body.username},
                         function (err, result) {
                             if (err && result === null) {
@@ -430,7 +371,7 @@ app.post('/create_user', function(req, res){
                                 }
 
                                 //ユーザー作成
-                                var _User = new db2.UserInfo();
+                                var _User = new db.UserInfo();
                                 _User.userid   = req.body.username;
                                 _User.nickname = req.body.nickname;
                                 _User.password = util.getHash(req.body.password);
@@ -501,7 +442,7 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
                     + '&client_id='    + encodeURIComponent(config.locapos_client_id);
     }
 
-    db2.UserInfo.findOne(
+    db.UserInfo.findOne(
         {userid : req.user.userid},
         function (err, result) {
             if (err || result === null) {
@@ -556,7 +497,7 @@ app.post('/user/update_userinfo', passport.authenticate('basic', { session: fals
     //todo locapos_valid
 
     //ユーザデータ更新処理
-    db2.UserInfo.update(
+    db.UserInfo.update(
         {userid : req.user.userid},
         {$set : { password      : passwd,
                   nickname      : req.body.nickname,
@@ -628,7 +569,7 @@ app.get('/user/getuserinfo', function(req, res){
 app.post('/api/post', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req, req.user.userid + ' ' + req.body.time);
 
-    var locinfo = new db2.LocInfo();
+    var locinfo = new db.LocInfo();
     locinfo.valid          = true;
     locinfo.time           = req.body.time;
     locinfo.user           = req.user.userid;
@@ -760,7 +701,7 @@ Building.geoNear(
     }
 
     //現在オンラインのユーザー探す
-    db2.LocInfo.distinct(
+    db.LocInfo.distinct(
         "user",
         {$or : req_user,
          time:{"$gte" : util.addMinutes(new Date, -5)},
@@ -797,7 +738,7 @@ Building.geoNear(
 
             //オンラインユーザの直近の位置を取得
             for (var i = 0; i < result.length; i++) {
-                db2.LocInfo.find(
+                db.LocInfo.find(
                     {user : result[i],
                      time : {"$gte" : util.addMinutes(new Date, -5)}
                     },
@@ -1003,7 +944,7 @@ app.get('/api/replay/latest/*', function(req, res){
     var latest = {};
 
     //現在オンラインのユーザー探す
-    db2.LocInfo.distinct(
+    db.LocInfo.distinct(
         "user",
         { time : { "$gte" : d1, "$lte" : d2}},
         function(err, result){
@@ -1027,7 +968,7 @@ app.get('/api/replay/latest/*', function(req, res){
 
             //オンラインユーザの直近の位置を取得
             for (var i = 0; i < result.length; i++) {
-                db2.LocInfo.find(
+                db.LocInfo.find(
                     {user : result[i], time : { "$gte" : d1, "$lte" : d2}},
                     {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
 
@@ -1068,7 +1009,7 @@ app.get('/api/replay/nickname/*', function(req, res){
     var d1 = new Date(day.slice(0,4), parseInt(day.slice(4,6)) -1, day.slice(6,8), 0, 0, 0);
     var d2 = new Date(day.slice(0,4), parseInt(day.slice(4,6)) -1, day.slice(6,8), 23, 59, 59);
 
-    db2.LocInfo.aggregate(
+    db.LocInfo.aggregate(
         {$match : {time : {"$gte" : d1, "$lte" : d2}}},
         {$group : {_id  : {user : "$user",
                            nickname  : "$nickname"
@@ -1123,8 +1064,7 @@ function getuserinfo(req, res) {
         res.send('(' + JSON.stringify(d) + ')'); 
 
     } else {
-console.log('db2');
-        db2.UserInfo.findOne(
+        db.UserInfo.findOne(
             {userid : req.query.user},
             function (err, result) {
                 var d={};
@@ -1162,7 +1102,7 @@ function getLatest(){
         var points = [];
 
         //現在オンラインのユーザー探す
-        db2.LocInfo.distinct(
+        db.LocInfo.distinct(
             "user",
             { time:{"$gte" : util.addMinutes(new Date, -5)}},
             function(err, result){
@@ -1182,7 +1122,7 @@ function getLatest(){
 
                 //オンラインユーザの直近の位置を取得
                 for (var i = 0; i < result.length; i++) {
-                    db2.LocInfo.find(
+                    db.LocInfo.find(
                         {user : result[i], time:{"$gte" : util.addMinutes(new Date, -5)}},
                         {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
 
@@ -1212,7 +1152,7 @@ function getLatest(){
 function getUserList(){
     setInterval(function(){
         //直近5分以内にデータ送信のあったユーザをアクティブとする
-        db2.LocInfo.aggregate(
+        db.LocInfo.aggregate(
             {$match : {time : {"$gte" : util.addMinutes(new Date, -5)}}},
             {$group : {_id  : {valid : "$valid",
                                user  : "$user"
@@ -1242,89 +1182,92 @@ function getUserList(){
 //外部サービス情報を取得
 function getRelayData(){
     setInterval(function(){
-        var url = config.relay_service_url1;
-        http.get(url, function(resp){
-            var body = '';
-            resp.setEncoding('utf8');
+        for (var i = 0; i < config.relay_service_url.length; i++) {
+            var url = config.relay_service_url[i];
+            http.get(url, function(resp){
+                var body = '';
+                resp.setEncoding('utf8');
 
-            resp.on('data', function(chunk){
-                body += chunk;
-            });
-            resp.on('end', function(resp){
-                if (body.length == 0){
-                    console.log('null');
-                    return;
-                }
-                
-                try{
-                    var latest = JSON.parse(body.slice(1,body.length -1));
-                    var points = latest.points;
-
-                    //位置情報保存
-                    for (var x = 0; x < points.length; x++){
-                        var locinfo = new db2.LocInfo();
-                        locinfo.valid          =  points[x].valid;
-                        locinfo.time           =  new Date;
-                        locinfo.user           =  points[x].user;
-                        locinfo.nickname       =  points[x].nickname;
-                        locinfo.lat            =  points[x].lat;
-                        locinfo.lon            =  points[x].lon;
-                        locinfo.dir            =  points[x].dir;
-                        locinfo.altitude       =  points[x].altitude;
-                        locinfo.velocity       =  points[x].velocity;
-                        locinfo.type           =  points[x].type;
-                        locinfo.flag           = '1';
-                        locinfo.saved          = '0';
-                        locinfo.ustream_status = 'offline';
-                        locinfo.relay_service  = 'dorakoko';
-                        locinfo.location = [parseFloat(points[x].lon), parseFloat(points[x].lat)];
-
-                        locinfo.save(function(err){
-                            if(err){
-                                console.log('err');
-                            }
-                        });
+                resp.on('data', function(chunk){
+                    body += chunk;
+                });
+                resp.on('end', function(resp){
+                    if (body.length == 0){
+                        console.log('null');
+                        return;
                     }
-                } catch(e){
-                    console.log('error!!');
-                }
+                    
+                    try{
+                        var latest = JSON.parse(body.slice(1,body.length -1));
+                        var points = latest.points;
+
+                        //位置情報保存
+                        for (var x = 0; x < points.length; x++){
+                            var locinfo = new db.LocInfo();
+                            locinfo.valid          =  points[x].valid;
+                            locinfo.time           =  new Date;
+                            locinfo.user           =  points[x].user;
+                            locinfo.nickname       =  points[x].nickname;
+                            locinfo.lat            =  points[x].lat;
+                            locinfo.lon            =  points[x].lon;
+                            locinfo.dir            =  points[x].dir;
+                            locinfo.altitude       =  points[x].altitude;
+                            locinfo.velocity       =  points[x].velocity;
+                            locinfo.type           =  points[x].type;
+                            locinfo.flag           = '1';
+                            locinfo.saved          = '0';
+                            locinfo.ustream_status = 'offline';
+                            locinfo.relay_service  = 'dorakoko';
+                            locinfo.location = [parseFloat(points[x].lon), parseFloat(points[x].lat)];
+
+                            locinfo.save(function(err){
+                                if(err){
+                                    console.log('err');
+                                }
+                            });
+                        }
+                    } catch(e){
+                        console.log('error!!');
+                    }
+                });
+            }).on('error', function(e){
+                console.log(e.message); //エラー時
             });
-        }).on('error', function(e){
-            console.log(e.message); //エラー時
-        });
-    }, config.relay_service_refresh_time1);
+        }
+    }, config.relay_service_refresh_time1 * 1000);
 
     //ユーザ名画像作成
     setInterval(function(){
-        var url = config.relay_service_url1;
-        http.get(url, function(resp){
-            var body = '';
-            resp.setEncoding('utf8');
+        for (var i = 0; i < config.relay_service_url.length; i++) {
+            var url = config.relay_service_url[i];
+            http.get(url, function(resp){
+                var body = '';
+                resp.setEncoding('utf8');
 
-            resp.on('data', function(chunk){
-                body += chunk;
-            });
-            resp.on('end', function(resp){
-                if (body.length == 0){
-                    console.log('null');
-                    return;
-                }
-
-                try{
-                    var latest = JSON.parse(body.slice(1,body.length -1));
-                    var points = latest.points;
-                    
-                    for (var x = 0; x < points.length; x++){
-                        //nickname画像生成 todo uid重複チェック
-                        var filename = util.getUserNameImg(points[x].user, points[x].nickname, '#f5f6ce');
+                resp.on('data', function(chunk){
+                    body += chunk;
+                });
+                resp.on('end', function(resp){
+                    if (body.length == 0){
+                        console.log('null');
+                        return;
                     }
-                    //console.log('setDorakokoImg');
-                } catch(e){
-                    console.log('error!!');
-                }
+
+                    try{
+                        var latest = JSON.parse(body.slice(1,body.length -1));
+                        var points = latest.points;
+                        
+                        for (var x = 0; x < points.length; x++){
+                            //nickname画像生成 todo uid重複チェック
+                            var filename = util.getUserNameImg(points[x].user, points[x].nickname, '#f5f6ce');
+                        }
+                    } catch(e){
+                        console.log('error!!');
+                    }
+                });
+            }).on('error', function(e){
+                console.log(e.message); //エラー時
             });
-        }).on('error', function(e){
-            console.log(e.message); //エラー時
-        });
-    }, config.relay_service_refresh_time2);
+        }
+    }, config.relay_service_refresh_time2 * 1000);
 }

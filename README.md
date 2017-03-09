@@ -20,6 +20,8 @@
 $ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | sh
 $ . ./.bashrc
 $ nvm install 5.6.0
+$ npm install node-dev -g
+$ npm install forever -g
 ```  
 * [MongoDB](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-debian/)をインストール  
 ``` sh
@@ -41,7 +43,18 @@ $ cd ImacocoServer
 $ npm install
 $ npm start
 ```
-（適当にサービスとして登録するためのスクリプトがあったほうがいいかもしれない）  
+
+~~（適当にサービスとして登録するためのスクリプトがあったほうがいいかもしれない）~~  
+↑いま作ってるので完成したらこんな感じでいけるようにする予定  
+（もしくはinstall.sh ）  
+```sh
+$ cd ImacocoServer
+$ npm install
+$ cp ./scripts/imacoco-server /etc/init.d/
+$ chmod +x /etc/init.d/imacoco-server
+$ update-rc.d /etc/init.d/imacoco-server defaults
+```
+
 
 ### APIの実装状況
 基本的には[今ココなう！(β):API](http://www.fujita-lab.com/imakoko/api.html "今ココなう！(β):API")の仕様を踏襲していますので、  

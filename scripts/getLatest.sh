@@ -22,6 +22,8 @@ if [ ! -e $saveto ]; then
     mkdir $saveto
 fi
 
+echo "create $saveto$DATE0.json"
+
 #1分単位で処理
 for n in `seq 0 1439`
 do
@@ -41,5 +43,6 @@ done
 #latest.json
 echo "[$latest]" > $saveto$DATE0.json
 
+echo "create $saveto$DATE0-nickname.json"
 #nickname.json
 curl -s $url2$DATE0 > $saveto$DATE0-nickname.json
