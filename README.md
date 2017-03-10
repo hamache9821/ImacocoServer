@@ -55,6 +55,23 @@ $ chmod +x /etc/init.d/imacoco-server
 $ update-rc.d /etc/init.d/imacoco-server defaults
 ```
 
+MongoDBのindex作成  
+
+```sh
+> db.locinfos.createIndex({time : 1,  user : 1});
+> db.locinfos.createIndex({time : -1, user : 1});
+> db.locinfos.createIndex({"location" : "2dsphere"});
+```
+
+
+ログを残さないならttl-indexしちゃったほうがよさげ  
+```sh
+> db.locinfos.createIndex({"location" : "2dsphere"});
+> db.locinfos.createIndex({time : 1},  { expireAfterSeconds: 600 });
+```
+
+
+
 
 ### APIの実装状況
 基本的には[今ココなう！(β):API](http://www.fujita-lab.com/imakoko/api.html "今ココなう！(β):API")の仕様を踏襲していますので、  
