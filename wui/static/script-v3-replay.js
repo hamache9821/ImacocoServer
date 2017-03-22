@@ -235,7 +235,7 @@ function update() {
 
 					if(user.nick_marker) {
 						var image = new google.maps.MarkerImage(
-							'/img/user/' + user.nickicon + '.png',
+							'/user/' + user.nickicon + '.png',
 							null,
 							null,
 							new google.maps.Point(0, 24)
@@ -264,7 +264,7 @@ function update() {
 						}
 
 						var image = new google.maps.MarkerImage(
-							'/img/user/' + user.nickicon + '.png',
+							'/user/' + user.nickicon + '.png',
 							null,
 							null,
 							new google.maps.Point(0, 24)

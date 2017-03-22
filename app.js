@@ -38,12 +38,14 @@ const util = require('./lib/common-utils.js')
     , geocoder = require('geocoder')
     , locapos = require('locapos')
     , compression = require('compression')
+    , lru_cache = require("lru-cache")
     , db = require('./lib/db.js');
 
 
 //グローバル変数
 global.latest = {};
 global.user_list = {};
+global.nickname = lru_cache({max : 1000, maxAge : 86400});
 
 
 //Express関係
@@ -415,16 +417,82 @@ app.post('/change_password_request', function(req, res){
 //--------- /user -----------
 //ユーザー名のpng画像を返す
 app.get('/user/*.png', function(req, res){
-    fs.readFile('./wui/img' + req.url,
-                function(err, data){
-                    if (err) {
-                        //todo なければ生成を試みる？
-                        res.status(404).send('Sorry, we cannot find that!');
+
+    if (config.nickname_saveto_db){
+        var filename = req.url.split('/')[2];
+        if (filename === undefined) {
+            res.status(404).send('Sorry, we cannot find that!!');
+            return;
+        }
+
+        if (global.nickname.has(filename)){
+            //キャッシュから取得
+            console.log('nickname ' + filename + ' from caches.');
+            var buffer = new Buffer(global.nickname.get(filename), 'base64');
+            res.send(buffer, { 'Content-Type': 'image/png' }, 200);
+        } else {
+            //dbから取得
+            db.NicknameInfo.findOne(
+                {filename : filename},
+                function (err, result) {
+                    if (err || result === null) {
+                        //dbに存在しない場合はファイルからの読込を試行する
+                        fs.readFile(
+                            './wui/img' + req.url,
+                            'base64',
+                            function(err, data){
+                                if (err) {
+                                    res.status(404).send('Sorry, we cannot find that!');
+                                } else {
+                                    global.nickname.set(filename, data);
+
+                                    if (config.nickname_convert) {
+                                        //dbにインポート
+                                        db.NicknameInfo.update(
+                                        {filename :  filename},
+                                        {$set : { data : data}},
+                                        {upsert : true, multi : false },
+                                        function(err, results){
+                                            if(err){
+                                                console.log('convert file:' + filename + ' to dbs. (ERR)');
+                                            } else {
+                                                console.log('convert file:' + filename + ' to dbs. (OK)');
+                                            }
+                                        });
+                                    } else {
+                                        console.log('nickname ' + filename + ' from files.');
+                                    }
+                                    
+                                    var buffer = new Buffer(global.nickname.get(filename), 'base64');
+                                    res.send(buffer, { 'Content-Type': 'image/png' }, 200);
+                                }
+                            }
+                        );
                     } else {
-                        res.send(data, { 'Content-Type': 'image/png' }, 200);
+                        console.log('nickname ' + filename + ' from dbs.');
+                        global.nickname.set(filename, result.data);
+                        var buffer = new Buffer(result.data, 'base64');
+                        res.send(buffer, { 'Content-Type': 'image/png' }, 200);
                     }
                 }
-               );
+            );
+        }
+
+    } else {
+        fs.readFile(
+            './wui/img' + req.url,
+            function(err, data){
+                if (err) {
+                    //todo なければ生成を試みる？
+                    res.status(404).send('Sorry, we cannot find that!');
+                } else {
+                    res.send(data, { 'Content-Type': 'image/png' }, 200);
+                }
+            }
+        );
+    }
+
+
 });
 
 //ユーザ情報の編集ページを表示
@@ -1141,7 +1209,7 @@ function getLatest(){
                 }
             }
         );
-    }, config.latest_refresh_time);
+    }, config.latest_refresh_time * 1000);
 }
 
 
