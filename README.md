@@ -45,14 +45,15 @@ $ npm start
 ```
 
 ~~（適当にサービスとして登録するためのスクリプトがあったほうがいいかもしれない）~~  
-↑いま作ってるので完成したらこんな感じでいけるようにする予定  
-（もしくはinstall.sh ）  
+
+* ./scripts/imacoco-serverのpidRootとappRootを適宜修正して、以下のコマンドでサービスになる（はず）  
+
 ```sh
 $ cd ImacocoServer
 $ npm install
 $ cp ./scripts/imacoco-server /etc/init.d/
 $ chmod +x /etc/init.d/imacoco-server
-$ update-rc.d /etc/init.d/imacoco-server defaults
+$ update-rc.d imacoco-server defaults
 ```
 
 MongoDBのindex作成  
@@ -64,9 +65,8 @@ MongoDBのindex作成
 ```
 
 
-ログを残さないならttl-indexしちゃったほうがよさげ  
+ログを残したくないならttl-indexしちゃったほうがよさげ  
 ```sh
-> db.locinfos.createIndex({"location" : "2dsphere"});
 > db.locinfos.createIndex({time : 1},  { expireAfterSeconds: 600 });
 ```
 
