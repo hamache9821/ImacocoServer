@@ -670,6 +670,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
                                         if (res) {console.log('ok');}
                                     });
         }
+
     } catch(e){
         console.log('locapos error!!');
     }
@@ -834,31 +835,76 @@ Building.geoNear(
     );
 });
 
-//逆ジオコード変換
+//逆ジオコード変換(json返却)
 app.get('/api/getaddress', passport.authenticate('basic', { session: false }), function(req, res){
     util.setConsolelog(req);
 
-    geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
-        if (data.status == 'OK'){
-            res.set('text/plain; charset=utf-8');
-            res.send(data.results[0].formatted_address);
-        }
-    }, { language: 'ja' });
-});
+    db.GeocodeInfo.find(
+        {location : {
+            $nearSphere : {
+                $geometry : {
+                    type        : 'Point',
+                    coordinates : [parseFloat(req.query.lon), parseFloat(req.query.lat)]
+                },
+                $maxDistance : 500
+            }
+         }
+        },
+        {_id : 0},
+        function(err, results){
+            if (err || results === null) {
+                res.set('Content-Type', 'text/plain; charset=utf-8');
+                res.send('err');
 
-//逆ジオコード変換(json返却)
-app.get('/api/getaddress.json', passport.authenticate('basic', { session: false }), function(req, res){
-    util.setConsolelog(req);
+            } else if (results.length === 0){
+                geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
+                    if (data.status === 'OK'){
+                        console.log('geocode from google api.');
 
-    geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
-        if (data.status == 'OK'){
-            res.set('text/plain; charset=utf-8');
-            res.send('(' + JSON.stringify(data.results[0]) + ')');
-        } else {
-            res.set('text/plain; charset=utf-8');
-            res.send('err');
+                        var geocode = util.parseGeocode(data.results[0]);
+
+                        //save geocode data
+                        db.GeocodeInfo.update(
+                        //{location :  [parseFloat(geocode.location.lon), parseFloat(geocode.location.lat)]},
+                        {location :  [parseFloat(req.query.lon), parseFloat(req.query.lat)]},
+                        {$set :{
+                                formatted_address   : geocode.formatted_address,
+                                route               : geocode.route,
+                                sublocality_level_4 : geocode.sublocality_level_4,
+                                sublocality_level_3 : geocode.sublocality_level_3,
+                                sublocality_level_2 : geocode.sublocality_level_2,
+                                sublocality_level_1 : geocode.sublocality_level_1,
+                                ward                : geocode.ward,
+                                city                : geocode.city,
+                                prefecture          : geocode.prefecture,
+                                country             : geocode.country,
+                                postal_code         : geocode.postal_code
+                               }
+                        },
+                        {upsert : true, multi : false },
+                        function(err, results){
+                            if(err){
+                                console.log('upsert geocode to dbs. (ERR)');
+                            } else {
+                                console.log('upsert geocode to dbs. (OK)');
+                            }
+                        });
+
+                        res.set('Content-Type', 'text/javascript; charset=utf-8');
+                        res.send('(' + JSON.stringify(geocode) + ')');
+                    } else {
+                        res.set('Content-Type', 'text/plain; charset=utf-8');
+                        res.send('err');
+                    }
+                }, { language: 'ja' });
+
+            } else {
+                console.log('geocode from dbs.');
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(results) + ')');
+            }
         }
-    }, { language: 'ja' });
+    ).sort({time: -1}).limit(1);
 });
 
 //--------- -----------
