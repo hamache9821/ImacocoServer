@@ -45,7 +45,7 @@ const util = require('./lib/common-utils.js')
 //グローバル変数
 global.latest = {};
 global.user_list = {};
-global.nickname = lru_cache({max : 1000, maxAge : 86400});
+global.nickname = lru_cache({max : config.nickname_cache_size, maxAge : config.nickname_cache_ttl * 1000});
 
 
 //Express関係
