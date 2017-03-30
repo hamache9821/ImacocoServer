@@ -15,6 +15,12 @@
 const config = require('config');
 
 //必須設定チェック
+if (!config.listen_type) {throw 'config `listen_type` is not set';}
+if (!config.http_listen_port) {throw 'config `http_listen_port` is not set';}
+//if (config.listen_type === 'https' && !config.https_listen_port) {throw 'config `http_listen_port` is not set';}
+//if (config.listen_type === 'https' && !https_private_key) {throw 'config `https_private_key` is not set';}
+//if (config.listen_type === 'https' && !https_certificate) {throw 'config `https_certificate` is not set';}
+
 if (!config.dbHost) {throw 'config `dbHost` is not set';}
 if (!config.dbName) {throw 'config `dbName` is not set';}
 if (!config.googlemap_api_key) {
@@ -29,6 +35,7 @@ const util = require('./lib/common-utils.js')
     , packageinfo = require('./package.json')
     , fs = require('fs')
     , http = require('http')
+    , https = require('https')
     , express = require('express')
     , app = express()
     , domain = require('express-domain-middleware')
@@ -49,13 +56,14 @@ global.nickname = lru_cache({max : config.nickname_cache_size, maxAge : config.n
 
 
 //Express関係
+app.disable('x-powered-by');
 app.use(compression());
 app.use(domain);
 app.use(function(err, req, res, next) {logger.error.fatal(err);}); //例外ハンドラ
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(passport.initialize());
 app.use(passport.session());
-app.set('port', config.port || 80);
+//app.set('port', config.service_port || 80);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
@@ -442,11 +450,14 @@ app.get('/user/*.png', function(req, res){
                             'base64',
                             function(err, data){
                                 if (err) {
+                                    //wget http://replay.imacoconow.com/img/user/
+//                                    util.wget('http://replay.imacoconow.com/img'+ req.url,'./wui/img' + req.url);
                                     res.status(404).send('Sorry, we cannot find that!');
                                 } else {
                                     global.nickname.set(filename, data);
 
                                     if (config.nickname_convert) {
+                                        //todo インポート前にpng形式かチェックする
                                         //dbにインポート
                                         db.NicknameInfo.update(
                                         {filename :  filename},
@@ -671,6 +682,11 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
                                     });
         }
 
+//console.log(req.headers.authorization);
+
+//test
+util.wget('http://localhost/api/getaddress2?lat='+ req.body.lat + '&lon=' + req.body.lon,'/dev/null');
+
     } catch(e){
         console.log('locapos error!!');
     }
@@ -835,76 +851,25 @@ Building.geoNear(
     );
 });
 
+
+//逆ジオコード変換(test用)
+app.get('/api/getaddress2', 
+    function(req, res, next){
+        if (!/^localhost/.test(req.headers.host)){
+            console.log('[\u001b[33mWARN\u001b[0m] Unauthorized access ' + req.url + '');
+            res.status(418).send('Cannot GET ' + req.url);
+            return;
+        } else {
+            next();
+        }
+    }
+    , function(req, res){
+        getReverseGeocode(req, res);
+});
+
 //逆ジオコード変換(json返却)
 app.get('/api/getaddress', passport.authenticate('basic', { session: false }), function(req, res){
-    util.setConsolelog(req);
-
-    db.GeocodeInfo.find(
-        {location : {
-            $nearSphere : {
-                $geometry : {
-                    type        : 'Point',
-                    coordinates : [parseFloat(req.query.lon), parseFloat(req.query.lat)]
-                },
-                $maxDistance : 500
-            }
-         }
-        },
-        {_id : 0},
-        function(err, results){
-            if (err || results === null) {
-                res.set('Content-Type', 'text/plain; charset=utf-8');
-                res.send('err');
-
-            } else if (results.length === 0){
-                geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
-                    if (data.status === 'OK'){
-                        console.log('geocode from google api.');
-
-                        var geocode = util.parseGeocode(data.results[0]);
-
-                        //save geocode data
-                        db.GeocodeInfo.update(
-                        //{location :  [parseFloat(geocode.location.lon), parseFloat(geocode.location.lat)]},
-                        {location :  [parseFloat(req.query.lon), parseFloat(req.query.lat)]},
-                        {$set :{
-                                formatted_address   : geocode.formatted_address,
-                                route               : geocode.route,
-                                sublocality_level_4 : geocode.sublocality_level_4,
-                                sublocality_level_3 : geocode.sublocality_level_3,
-                                sublocality_level_2 : geocode.sublocality_level_2,
-                                sublocality_level_1 : geocode.sublocality_level_1,
-                                ward                : geocode.ward,
-                                city                : geocode.city,
-                                prefecture          : geocode.prefecture,
-                                country             : geocode.country,
-                                postal_code         : geocode.postal_code
-                               }
-                        },
-                        {upsert : true, multi : false },
-                        function(err, results){
-                            if(err){
-                                console.log('upsert geocode to dbs. (ERR)');
-                            } else {
-                                console.log('upsert geocode to dbs. (OK)');
-                            }
-                        });
-
-                        res.set('Content-Type', 'text/javascript; charset=utf-8');
-                        res.send('(' + JSON.stringify(geocode) + ')');
-                    } else {
-                        res.set('Content-Type', 'text/plain; charset=utf-8');
-                        res.send('err');
-                    }
-                }, { language: 'ja' });
-
-            } else {
-                console.log('geocode from dbs.');
-                res.set('Content-Type', 'text/javascript; charset=utf-8');
-                res.send('(' + JSON.stringify(results) + ')');
-            }
-        }
-    ).sort({time: -1}).limit(1);
+    getReverseGeocode(req, res);
 });
 
 //--------- -----------
@@ -1153,11 +1118,35 @@ app.get('/api/replay/nickname/*', function(req, res){
 });
 
 //サーバー起動
-http.createServer(app).listen(app.get('port'), function(){
-  console.log('[INFO] ImacocoNow server listening on port: ' + app.get('port'));
-//  console.log('['+ cyan +'INFO' + reset + '] ImacocoNow server listening on port: ' + app.get('port'));
+try{
+    for (var i = 0; i < config.listen_type.length ; i++){
 
-});
+        switch (config.listen_type[i]){
+            case 'http':
+                //サーバー起動(http)
+                http.createServer(app).listen(config.http_listen_port, function(){
+                  console.log('[INFO] ImacocoNow server (http) listening on port: ' + config.http_listen_port);
+                });
+                break;
+            case 'https':
+                //サーバー起動(https)
+                var options = {
+                    key  : fs.readFileSync(config.https_private_key),
+                    cert : fs.readFileSync(config.https_certificate)
+                };
+
+                https.createServer(options, app).listen(config.https_listen_port, function(){
+                  console.log('[INFO] ImacocoNow server (https) listening on port: ' + config.https_listen_port);
+                });
+                break;
+            default:
+                break;
+        }
+    }
+} catch(e){
+    console.log(e);
+}
+
 
 
 //===============共通処理 ===============
@@ -1290,6 +1279,78 @@ function getUserList(){
             }
         );
     }, config.latest_refresh_time);
+}
+
+//逆ジオコーディング
+function getReverseGeocode(req, res){
+    util.setConsolelog(req);
+
+    db.GeocodeInfo.find(
+        {location : {
+            $nearSphere : {
+                $geometry : {
+                    type        : 'Point',
+                    coordinates : [parseFloat(req.query.lon), parseFloat(req.query.lat)]
+                },
+                $maxDistance : 500
+            }
+         }
+        },
+        {_id : 0},
+        function(err, results){
+            if (err || results === null) {
+                res.set('Content-Type', 'text/plain; charset=utf-8');
+                res.send('err');
+
+            } else if (results.length === 0){
+                geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
+                    if (data.status === 'OK'){
+                        console.log('geocode from google api.');
+
+                        var geocode = util.parseGeocode(data.results[0]);
+
+                        //save geocode data
+                        db.GeocodeInfo.update(
+                        //{location :  [parseFloat(geocode.location.lon), parseFloat(geocode.location.lat)]},
+                        {location :  [parseFloat(req.query.lon), parseFloat(req.query.lat)]},
+                        {$set :{
+                                formatted_address   : geocode.formatted_address,
+                                route               : geocode.route,
+                                sublocality_level_4 : geocode.sublocality_level_4,
+                                sublocality_level_3 : geocode.sublocality_level_3,
+                                sublocality_level_2 : geocode.sublocality_level_2,
+                                sublocality_level_1 : geocode.sublocality_level_1,
+                                ward                : geocode.ward,
+                                city                : geocode.city,
+                                prefecture          : geocode.prefecture,
+                                country             : geocode.country,
+                                postal_code         : geocode.postal_code
+                               }
+                        },
+                        {upsert : true, multi : false },
+                        function(err, results){
+                            if(err){
+                                console.log('upsert geocode to dbs. (ERR)');
+                            } else {
+                                console.log('upsert geocode to dbs. (OK)');
+                            }
+                        });
+
+                        res.set('Content-Type', 'text/javascript; charset=utf-8');
+                        res.send('(' + JSON.stringify(geocode) + ')');
+                    } else {
+                        res.set('Content-Type', 'text/plain; charset=utf-8');
+                        res.send('err');
+                    }
+                }, { language: 'ja' });
+
+            } else {
+                console.log('geocode from dbs.');
+                res.set('Content-Type', 'text/javascript; charset=utf-8');
+                res.send('(' + JSON.stringify(results) + ')');
+            }
+        }
+    ).sort({time: -1}).limit(1);
 }
 
 

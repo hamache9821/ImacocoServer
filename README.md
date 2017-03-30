@@ -17,31 +17,31 @@
 ###環境構築方法(Debianの場合)  
 * nvmとNode.jsをインストール
 ``` sh
-$ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | sh
-$ . ./.bashrc
-$ nvm install 5.6.0
-$ npm install node-dev -g
-$ npm install forever -g
+ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | sh
+ . ./.bashrc
+ nvm install 5.6.0
+ npm install node-dev -g
+ npm install forever -g
 ```  
 * [MongoDB](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-debian/)をインストール  
 ``` sh
-$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
-$ echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
-$ sudo apt-get update
-$ sudo apt-get install -y mongodb-org
+ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+ echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+ sudo apt-get update
+ sudo apt-get install -y mongodb-org
 ```
 * node-canvas用
 ```sh
-apt-get install libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-essential g++
+ apt-get install libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-essential g++
 ```
 
 ### 使い方
 
 ```sh
-$ git clone https://github.com/hamache9821/ImacocoServer.git
-$ cd ImacocoServer
-$ npm install
-$ npm start
+ git clone https://github.com/hamache9821/ImacocoServer.git
+ cd ImacocoServer
+ npm install
+ npm start
 ```
 
 ~~（適当にサービスとして登録するためのスクリプトがあったほうがいいかもしれない）~~  
@@ -49,27 +49,53 @@ $ npm start
 * ./scripts/imacoco-serverのpidRootとappRootを適宜修正して、以下のコマンドでサービスになる（はず）  
 
 ```sh
-$ cd ImacocoServer
-$ npm install
-$ cp ./scripts/imacoco-server /etc/init.d/
-$ chmod +x /etc/init.d/imacoco-server
-$ update-rc.d imacoco-server defaults
+ cd ImacocoServer
+ npm install
+ cp ./scripts/imacoco-server /etc/init.d/
+ chmod +x /etc/init.d/imacoco-server
+ update-rc.d imacoco-server defaults
 ```
 
 MongoDBのindex作成  
 
 ```sh
-> db.locinfos.createIndex({time : 1,  user : 1});
-> db.locinfos.createIndex({time : -1, user : 1});
-> db.locinfos.createIndex({"location" : "2dsphere"});
+ db.locinfos.createIndex({time : 1,  user : 1});
+ db.locinfos.createIndex({time : -1, user : 1});
+ db.locinfos.createIndex({"location" : "2dsphere"});
+ db.geocoders.createIndex({"location" : "2dsphere"});
 ```
 
 
 ログを残したくないならttl-indexしちゃったほうがよさげ  
 ```sh
-> db.locinfos.createIndex({time : 1},  { expireAfterSeconds: 600 });
+ db.locinfos.createIndex({time : 1},  { expireAfterSeconds: 600 });
 ```
 
+
+https対応  (let's encryptで証明書取得する場合)  
+let's encryptの使い方はググってください   
+
+```sh
+ git clone https://github.com/letsencrypt/letsencrypt.git
+ cd letsencrypt
+ ./certbot-auto certonly --standalone -m admin@example.com -d imacoco.example.com
+ ln -s /etc/letsencrypt/live/example.com/privkey.pem /usr/ImacocoServer/cert/private_key.pem
+ ln -s /etc/letsencrypt/live/example.com/cert.pem /usr/ImacocoServer/cert/certificate.pem
+```
+
+```default.json
+    "listen_type" : ["http"],
+```
+を
+```default.json
+    "listen_type" : ["https"],
+```
+または
+
+```default.json
+    "listen_type" : ["http", "https"],
+```
+に設定
 
 
 

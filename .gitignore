@@ -36,6 +36,12 @@ node_modules
 wui/img/user/*
 !wui/img/user/.gitkeep
 
+#https ssl certificate
+cert/*
+!cert/.gitkeep
+
+
+
 # replay data directory
 wui/json
 
