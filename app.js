@@ -103,6 +103,27 @@ app.use(function(req, res, next){
 });
 
 
+//httpsリダイレクト設定
+app.use (function (req, res, next) {
+    if (config.use_https_redirect) {
+        if (req.secure) {
+            next();
+        } else {
+            var redirect_host = '';
+
+            if (req.headers['x-forwarded-host']) {
+                redirect_host = req.headers['x-forwarded-host'];
+            } else {
+                redirect_host = req.headers.host;
+            }
+            res.redirect('https://' + redirect_host + req.url);
+        }
+    } else {
+        next();
+    }
+});
+
+
 //静的なファイルのルーティング
 app.use(express.static('wui'));
 
@@ -451,31 +472,37 @@ app.get('/user/*.png', function(req, res){
                             function(err, data){
                                 if (err) {
                                     //wget http://replay.imacoconow.com/img/user/
-//                                    util.wget('http://replay.imacoconow.com/img'+ req.url,'./wui/img' + req.url);
+                                    if (/[a-z0-9]{32}\.png/.test(req.url)) {
+                                        util.wget('http://replay.imacoconow.com/img'+ req.url,'./wui/img' + req.url);
+                                    }
                                     res.status(404).send('Sorry, we cannot find that!');
                                 } else {
-                                    global.nickname.set(filename, data);
+                                    //png形式かチェックする
+                                    if (/^iVBO.*/.test(data)) {
+                                        global.nickname.set(filename, data);
 
-                                    if (config.nickname_convert) {
-                                        //todo インポート前にpng形式かチェックする
-                                        //dbにインポート
-                                        db.NicknameInfo.update(
-                                        {filename :  filename},
-                                        {$set : { data : data}},
-                                        {upsert : true, multi : false },
-                                        function(err, results){
-                                            if(err){
-                                                console.log('convert file:' + filename + ' to dbs. (ERR)');
-                                            } else {
-                                                console.log('convert file:' + filename + ' to dbs. (OK)');
-                                            }
-                                        });
+                                        if (config.nickname_convert) {
+                                            //dbにインポート
+                                            db.NicknameInfo.update(
+                                            {filename :  filename},
+                                            {$set : { data : data}},
+                                            {upsert : true, multi : false },
+                                            function(err, results){
+                                                if(err){
+                                                    console.log('convert file:' + filename + ' to dbs. (ERR)');
+                                                } else {
+                                                    console.log('convert file:' + filename + ' to dbs. (OK)');
+                                                }
+                                            });
+                                        } else {
+                                            console.log('nickname ' + filename + ' from files.');
+                                        }
+                                        
+                                        var buffer = new Buffer(global.nickname.get(filename), 'base64');
+                                        res.send(buffer, { 'Content-Type': 'image/png' }, 200);
                                     } else {
-                                        console.log('nickname ' + filename + ' from files.');
+                                        res.status(404).send('Sorry, we cannot find that!');
                                     }
-                                    
-                                    var buffer = new Buffer(global.nickname.get(filename), 'base64');
-                                    res.send(buffer, { 'Content-Type': 'image/png' }, 200);
                                 }
                             }
                         );
@@ -494,7 +521,6 @@ app.get('/user/*.png', function(req, res){
             './wui/img' + req.url,
             function(err, data){
                 if (err) {
-                    //todo なければ生成を試みる？
                     res.status(404).send('Sorry, we cannot find that!');
                 } else {
                     res.send(data, { 'Content-Type': 'image/png' }, 200);
