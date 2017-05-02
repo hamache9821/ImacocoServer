@@ -1385,7 +1385,18 @@ function getRelayData(){
     setInterval(function(){
         for (var i = 0; i < config.relay_service_url.length; i++) {
             var url = config.relay_service_url[i];
-            http.get(url, function(resp){
+            var schema;
+
+            if (/^https:.*$/.test(url)) {
+                schema = https;
+            } else if (/^http:.*$/.test(url)) {
+                schema = http;
+            } else {
+                console.log('err');
+                return;
+            }
+
+            schema.get(url, function(resp){
                 var body = '';
                 resp.setEncoding('utf8');
 
@@ -1441,7 +1452,18 @@ function getRelayData(){
     setInterval(function(){
         for (var i = 0; i < config.relay_service_url.length; i++) {
             var url = config.relay_service_url[i];
-            http.get(url, function(resp){
+            var schema;
+
+            if (/^https:.*$/.test(url)) {
+                schema = https;
+            } else if (/^http:.*$/.test(url)) {
+                schema = http;
+            } else {
+                console.log('err');
+                return;
+            }
+
+            schema.get(url, function(resp){
                 var body = '';
                 resp.setEncoding('utf8');
 
@@ -1460,6 +1482,7 @@ function getRelayData(){
                         
                         for (var x = 0; x < points.length; x++){
                             //nickname画像生成 todo uid重複チェック
+                            //リプレイと同じでMD5に統一する予定
                             var filename = util.getUserNameImg(points[x].user, points[x].nickname, '#f5f6ce');
                         }
                     } catch(e){
