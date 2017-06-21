@@ -21,7 +21,7 @@
  . ./.bashrc
  nvm install 5.6.0
  npm install node-dev -g
- npm install forever -g
+ npm install pm2 -g
 ```  
 * [MongoDB](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-debian/)をインストール  
 ``` sh
@@ -44,17 +44,24 @@
  npm start
 ```
 
-~~（適当にサービスとして登録するためのスクリプトがあったほうがいいかもしれない）~~  
 
-* ./scripts/imacoco-serverのpidRootとappRootを適宜修正して、以下のコマンドでサービスになる（はず）  
+#### デーモン化（pm2で対応）  
 
 ```sh
  cd ImacocoServer
- npm install
- cp ./scripts/imacoco-server /etc/init.d/
- chmod +x /etc/init.d/imacoco-server
- update-rc.d imacoco-server defaults
+ pm2 start processes.json
+ pm2 startup
+ pm2 save
 ```
+
+
+必要ならlogrotateを設定（後で書く）  
+
+```sh
+ pm2 install pm2-logrotate
+
+```
+
 
 MongoDBのindex作成  
 

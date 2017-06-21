@@ -1,0 +1,20 @@
+{
+  "apps": [
+    {
+      "name": "imacoco-server",
+      "script": "app.js",
+      "node_args" : "",
+      "error_file": "/usr/local/var/log/imacoco-server.stderr.log",
+      "out_file": "/usr/local/var/log/imacoco-server.stdout.log",
+      "merge_logs": true,
+      "pid_file": "/usr/local/var/run/imacoco-server.pid",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "env": {
+        "NODE_ENV": "default",
+        "LOG_STDOUT": "/usr/local/var/log/imacoco-server.stdout.log",
+        "LOG_STDERR": "/usr/local/var/log/imacoco-server.stderr.log"
+      }
+    }
+  ]
+}
