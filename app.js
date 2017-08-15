@@ -34,6 +34,7 @@ require('date-utils');
 const util = require('./lib/common-utils.js')
     , packageinfo = require('./package.json')
     , fs = require('fs')
+    , zlib = require('zlib')
     , http = require('http')
     , https = require('https')
     , express = require('express')
@@ -153,21 +154,26 @@ app.get('/api/test', function(req, res){
     res.send('OK'+ util.getHash( '0000'));
 });
 
-
-//今ココリプレイ
+//--------- 今ココリプレイ -----------
+//Top画面
 app.get('/replay', function(req, res){
     util.setConsolelog(req);
     res.redirect(301, '/replay/date/' + new Date().toFormat("YYYYMMDD") );
 });
 
 
-//今ココリプレイ
+//日付指定画面
 app.get('/replay/date/*', function(req, res){
     util.setConsolelog(req);
     var day = '';
+    var region =[];
+    var title = '';
+
+    //表示エリア
+    getMapRegion(req.query.region, title, region);
 
     try{
-         day = req.url.split('/')[3].replace('.json','');
+         day = req.url.split('/')[3].split('?')[0].replace('.json','');
     } catch(e){
         console.log('error!!');
     }
@@ -180,9 +186,88 @@ app.get('/replay/date/*', function(req, res){
     res.render('replay',
                {service_name : config.service_name,
                 api_key      : config.googlemap_api_key,
-                today        : day
+                today        : day,
+                region       : JSON.stringify(region)
                 }
               );
+});
+
+
+//リプレイ位置情報返却API
+app.get('/replay/latest/*', function(req, res){
+    util.setConsolelog(req,'');
+
+    var _file
+       ,day = '';
+
+    try{
+         day = req.url.split('/')[3].split('?')[0].replace('.json','');
+    } catch(e){
+        console.log('error!!');
+    }
+
+    //日付を簡易チェックしてだめなら404
+    if (!/^[0-9]{8}$/.test(day)) {
+        res.status(404).send('Sorry, we cannot find that!!');
+        return;
+    }
+
+    try{
+        _file = fs.readFileSync('./wui/json/' + day.substr(0, 4) + '/' + day + '.json.gz');
+    } catch(e){
+        res.status(404).send('Sorry, we cannot find that!!');
+        return;
+    }
+
+    zlib.gunzip(
+        _file,
+        function(err, bin){
+            if (err) {
+                res.status(404).send('Sorry, we cannot find that!!');
+            } else {
+                res.send(bin.toString('utf-8'));
+            }
+        }
+    );
+});
+
+
+//リプレイユーザ情報返却API
+app.get('/replay/nickname/*', function(req, res){
+    util.setConsolelog(req,'');
+
+    var _file
+       ,day = '';
+
+    try{
+         day = req.url.split('/')[3].split('?')[0].replace('.json','');
+    } catch(e){
+        console.log('error!!');
+    }
+
+    //日付を簡易チェックしてだめなら404
+    if (!/^[0-9]{8}$/.test(day)) {
+        res.status(404).send('Sorry, we cannot find that!!');
+        return;
+    }
+
+    try{
+        _file = fs.readFileSync('./wui/json/' + day.substr(0, 4) + '/' + day + '-nickname.json.gz');
+    } catch(e){
+        res.status(404).send('Sorry, we cannot find that!!');
+        return;
+    }
+
+    zlib.gunzip(
+        _file,
+        function(err, bin){
+            if (err) {
+                res.status(404).send('Sorry, we cannot find that!!');
+            } else {
+                res.send(bin.toString('utf-8'));
+            }
+        }
+    );
 });
 
 
@@ -236,52 +321,7 @@ app.get('/view', function(req, res){
     }
 
     //表示エリア
-    switch (req.query.region){
-        case 'hokkaido':
-            title = '：地図モード（北海道）';
-            region.push({'lat':45.383019, 'lon':144.920654 });
-            region.push({'lat':41.47566,  'lon':139.75708 });
-            break;
-        case 'tohoku':
-            title = '：地図モード（東北）';
-            region.push({'lat':40.934265, 'lon':142.058716 });
-            region.push({'lat':38.565348, 'lon':139.334106 });
-            break;
-        case 'tokyo':
-            title = '：地図モード（関東）';
-            region.push({'lat':35.951329861522666, 'lon':139.01275634765625 });
-            region.push({'lat':35.26580442886754,  'lon':140.25283813476562 });
-            region.push({'lat':35.266925688950074, 'lon':139.04983520507812 });
-            region.push({'lat':35.968003617226884, 'lon':140.21575927734375 });
-            break;
-        case 'hokuriku':
-            title = '：地図モード（北陸）';
-            region.push({'lat':35.469618, 'lon':135.362549 });
-            region.push({'lat':37.905199, 'lon':139.042969 });
-            break;
-        case 'nagoya':
-            title = '：地図モード（中京）';
-            region.push({'lat':35.64836915737426,  'lon':136.2249755859375 });
-            region.push({'lat':34.279914398549934, 'lon':138.1805419921875 });
-            break;
-        case 'osaka':
-            title = '：地図モード（関西）';
-            region.push({'lat':35.64836915737426, 'lon':136.2249755859375 });
-            region.push({'lat':33.8339199536547,  'lon':134.1485595703125 });
-            break;
-        case 'kyusyu':
-            title = '：地図モード（九州）';
-            region.push({'lat':33.92513,  'lon':131.973267 });
-            region.push({'lat':31.071756, 'lon':129.578247 });
-            break;
-        case undefined:
-        case 'japan':
-        default:
-            title = '：地図モード（全国）';
-            region.push({'lat':25.99755, 'lon':126.738281 });
-            region.push({'lat':45.521744, 'lon':145.283203 });
-            break;
-    }
+    getMapRegion(req.query.region, title, region);
 
     //現在位置
     if (req.query.sensor === undefined){
@@ -305,6 +345,7 @@ app.get('/view', function(req, res){
                }
               );
 });
+
 
 //そのうち
 //過去に記録したデータを地図上にプロット
@@ -688,6 +729,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     locinfo.flag           = '1';
     locinfo.saved          = req.body.save;     //jsonの互換性のために残してるだけ
     locinfo.ustream_status = 'offline';         //jsonの互換性のために残してるだけ
+    locinfo.allow_replay   = '1';         
     locinfo.location = [parseFloat(req.body.lon), parseFloat(req.body.lat)];
 
     locinfo.save(function(err){
@@ -708,14 +750,12 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
                                     });
         }
 
-//console.log(req.headers.authorization);
+    //test
+    util.wget('http://localhost/api/getaddress2?lat='+ req.body.lat + '&lon=' + req.body.lon,'/dev/null');
 
-//test
-util.wget('http://localhost/api/getaddress2?lat='+ req.body.lat + '&lon=' + req.body.lon,'/dev/null');
-
-    } catch(e){
-        console.log('locapos error!!');
-    }
+        } catch(e){
+            console.log('getaddress error!!');
+        }
 });
 
 //現在のユーザー一覧を取得
@@ -1429,8 +1469,9 @@ function getRelayData(){
                             locinfo.flag           = '1';
                             locinfo.saved          = '0';
                             locinfo.ustream_status = 'offline';
-                            locinfo.relay_service  = 'dorakoko';
+                            locinfo.relay_service  = url;
                             locinfo.location = [parseFloat(points[x].lon), parseFloat(points[x].lat)];
+                            locinfo.allow_replay   = '1';
 
                             locinfo.save(function(err){
                                 if(err){
@@ -1494,4 +1535,54 @@ function getRelayData(){
             });
         }
     }, config.relay_service_refresh_time2 * 1000);
+}
+
+//地図表示エリア設定
+function getMapRegion(area, title, region){
+    switch (area){
+        case 'hokkaido':
+            title = '：地図モード（北海道）';
+            region.push({'lat':45.383019, 'lon':144.920654 });
+            region.push({'lat':41.47566,  'lon':139.75708 });
+            break;
+        case 'tohoku':
+            title = '：地図モード（東北）';
+            region.push({'lat':40.934265, 'lon':142.058716 });
+            region.push({'lat':38.565348, 'lon':139.334106 });
+            break;
+        case 'tokyo':
+            title = '：地図モード（関東）';
+            region.push({'lat':35.951329861522666, 'lon':139.01275634765625 });
+            region.push({'lat':35.26580442886754,  'lon':140.25283813476562 });
+            region.push({'lat':35.266925688950074, 'lon':139.04983520507812 });
+            region.push({'lat':35.968003617226884, 'lon':140.21575927734375 });
+            break;
+        case 'hokuriku':
+            title = '：地図モード（北陸）';
+            region.push({'lat':35.469618, 'lon':135.362549 });
+            region.push({'lat':37.905199, 'lon':139.042969 });
+            break;
+        case 'nagoya':
+            title = '：地図モード（中京）';
+            region.push({'lat':35.64836915737426,  'lon':136.2249755859375 });
+            region.push({'lat':34.279914398549934, 'lon':138.1805419921875 });
+            break;
+        case 'osaka':
+            title = '：地図モード（関西）';
+            region.push({'lat':35.64836915737426, 'lon':136.2249755859375 });
+            region.push({'lat':33.8339199536547,  'lon':134.1485595703125 });
+            break;
+        case 'kyusyu':
+            title = '：地図モード（九州）';
+            region.push({'lat':33.92513,  'lon':131.973267 });
+            region.push({'lat':31.071756, 'lon':129.578247 });
+            break;
+        case undefined:
+        case 'japan':
+        default:
+            title = '：地図モード（全国）';
+            region.push({'lat':25.99755, 'lon':126.738281 });
+            region.push({'lat':45.521744, 'lon':145.283203 });
+            break;
+    }
 }

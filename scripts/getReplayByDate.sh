@@ -46,3 +46,6 @@ echo "[$latest]" > $saveto$DATE0.json
 echo "create $saveto$DATE0-nickname.json"
 #nickname.json
 curl -s $url2$DATE0 > $saveto$DATE0-nickname.json
+
+echo "gzip $saveto$DATE0.json $saveto$DATE0-nickname.json"
+gzip -f $saveto$DATE0.json $saveto$DATE0-nickname.json

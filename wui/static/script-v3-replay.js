@@ -3,6 +3,7 @@
  *
  * Shintaro Inagaki
  *
+ * 2017 modify by hamache9821
  */
 
 $(function() {
@@ -35,46 +36,9 @@ var mapOptions = {
 // Google Maps API v3
 map = new google.maps.Map(document.getElementById('map'), mapOptions);
 
+
 // 初期化処理
 function initialize() {
-
-	// 地図表示範囲の設定
-	if (isDefined('map_region')) {
-		var min_lat = 91;
-		var min_lon = 181;
-		var max_lat = -91;
-		var max_lon = -181;
-
-		for (var idx in map_region) {
-			if (map_region[idx].lat < min_lat) {
-				min_lat = map_region[idx].lat;
-			}
-			if (max_lat < map_region[idx].lat) {
-				max_lat = map_region[idx].lat;
-			}
-			if (map_region[idx].lon < min_lon) {
-				min_lon = map_region[idx].lon;
-			}
-			if (max_lon < map_region[idx].lon) {
-				max_lon = map_region[idx].lon;
-			}
-		}
-		// 全体が表示できる矩形座標を計算
-		region = new google.maps.LatLngBounds(
-			new  google.maps.LatLng(min_lat, min_lon),
-			new  google.maps.LatLng(max_lat, max_lon)
-		);
-		// 全体が表示できるように位置とズームを設定
-		map.fitBounds(region);
-	} else {
-		region = new google.maps.LatLngBounds(
-			new  google.maps.LatLng(33, 130),
-			new  google.maps.LatLng(43, 140)
-		);
-		// 全体が表示できるように位置とズームを設定
-		map.fitBounds(region);
-	}
-
 	// 地図をクリックしたときのイベント
 	google.maps.event.addListener(map, 'click', function() {
 		if (traceuser && traceuser != 'all') {
@@ -121,6 +85,45 @@ function initialize() {
 	}
 
 	 window.setTimeout(wait, 1000);
+}
+
+// 地図表示範囲の設定
+function setMapRegion(){
+	if (isDefined('map_region')) {
+		var min_lat = 91;
+		var min_lon = 181;
+		var max_lat = -91;
+		var max_lon = -181;
+
+		for (var idx in map_region) {
+			if (map_region[idx].lat < min_lat) {
+				min_lat = map_region[idx].lat;
+			}
+			if (max_lat < map_region[idx].lat) {
+				max_lat = map_region[idx].lat;
+			}
+			if (map_region[idx].lon < min_lon) {
+				min_lon = map_region[idx].lon;
+			}
+			if (max_lon < map_region[idx].lon) {
+				max_lon = map_region[idx].lon;
+			}
+		}
+		// 全体が表示できる矩形座標を計算
+		region = new google.maps.LatLngBounds(
+			new  google.maps.LatLng(min_lat, min_lon),
+			new  google.maps.LatLng(max_lat, max_lon)
+		);
+		// 全体が表示できるように位置とズームを設定
+		map.fitBounds(region);
+	} else {
+		region = new google.maps.LatLngBounds(
+			new  google.maps.LatLng(33, 130),
+			new  google.maps.LatLng(43, 140)
+		);
+		// 全体が表示できるように位置とズームを設定
+		map.fitBounds(region);
+	}
 }
 
 // ウェイト
@@ -636,20 +639,19 @@ function isDefined(v, obj) {
 		});
 	});
 
+	// 地図表示範囲の設定
+    setMapRegion();
+
 	// JSON読み込み
-	$.getJSON('/json/' + replayYear + '/' + replayDate + '-nickname.json?' + (new Date()).getHours(), function(json){
+	$.getJSON('/replay/nickname/' + replayDate + '.json?' + (new Date()).getHours(), function(json){
 		nicknameList = eval(json);
 
-		$.getJSON('/json/' + replayYear + '/' + replayDate + '.json?' + (new Date()).getHours(), function(json){
+		$.getJSON('/replay/latest/' + replayDate + '.json?' + (new Date()).getHours(), function(json){
 			// 画像のプリロード
 			$('#preload').append('<img src="' + static_file_site + 'middle_arrow_mini.png" />');
 			$('#preload').append('<img src="' + static_file_site + 'direction_icon.png" />');
 			$('#preload').append('<img src="' + static_file_site + 'stream_icon.png" />');
-/*
-			for(var username in nicknameList) {
-				$('#preload').append('<img src="/img/user/' + nicknameList[username]['nickicon'] + '.png" />');
-			}
-*/
+
 			replayData = eval(json);
 			initialize();
 		});
@@ -937,7 +939,11 @@ function isDefined(v, obj) {
         if (parseInt(s) > parseInt(ss)) {
             return '&nbsp;';
         } else {
-            return '<a href="' + s + '">' + s + '</a>';
+            if (! map_region) {
+                return '<a href="' + s + '">' + s + '</a>';
+    	    } else {
+                return '<a href="' + s + location.search + '">' + s + '</a>';
+            }
 	    }
 	}
 });
