@@ -37,6 +37,7 @@ const util = require('./lib/common-utils.js')
     , zlib = require('zlib')
     , http = require('http')
     , https = require('https')
+    , HttpStatus = require('http-status-codes')
     , express = require('express')
     , app = express()
     , domain = require('express-domain-middleware')
@@ -54,7 +55,8 @@ const util = require('./lib/common-utils.js')
 global.latest = {};
 global.user_list = {};
 global.nickname = lru_cache({max : config.nickname_cache_size, maxAge : config.nickname_cache_ttl * 1000});
-
+global.replay_latest = lru_cache({max : config.replay_cache_size, maxAge : config.replay_cache_ttl * 1000});
+global.replay_nickname = lru_cache({max : config.replay_cache_size, maxAge : config.replay_cache_ttl * 1000});
 
 //Express関係
 app.disable('x-powered-by');
@@ -96,7 +98,7 @@ app.use(function(req, res, next){
     //リプレイ作成用urlはlocalhost以外からはアクセスさせない
     if (/^\/api\/replay\/.*/.test(req.url) && !/^localhost/.test(req.headers.host)){
         console.log('[\u001b[33mWARN\u001b[0m] Unauthorized access ' + req.url + '');
-        res.status(418).send('Cannot GET ' + req.url);
+        res.status(HttpStatus.UNAUTHORIZED).send('Cannot GET ' + req.url);
         return;
     } else {
         next();
@@ -158,7 +160,7 @@ app.get('/api/test', function(req, res){
 //Top画面
 app.get('/replay', function(req, res){
     util.setConsolelog(req);
-    res.redirect(301, '/replay/date/' + new Date().toFormat("YYYYMMDD") );
+    res.redirect(HttpStatus.MOVED_PERMANENTLY, '/replay/date/' + new Date().toFormat("YYYYMMDD") );
 });
 
 
@@ -173,9 +175,34 @@ app.get('/replay/date/*', function(req, res){
     getMapRegion(req.query.region, title, region);
 
     try{
-         day = req.url.split('/')[3].split('?')[0].replace('.json','');
+        day = req.url.split('/')[3].split('?')[0].replace('.json','');
     } catch(e){
         console.log('error!!');
+    }
+
+    //追跡ユーザ
+    if (req.query.trace === undefined){
+        req.query.trace = '__nouser__';
+    }
+
+    //表示ユーザ
+    switch (req.query.user){
+        case undefined:
+        case 'all':
+        case '':
+        console.log('1');
+            var tmp = [];
+            tmp.push("all");
+            req.query.user = tmp;
+            break;
+        default:
+            var tmp = [];
+            var ls = req.query.user.split(',');
+            
+            for (var i = 0; i < ls.length; i++) {
+                tmp.push(ls[i]);
+            }
+            req.query.user = tmp;
     }
 
     //日付を簡易チェックしてだめなら当日を入れる
@@ -188,6 +215,8 @@ app.get('/replay/date/*', function(req, res){
                 api_key      : config.googlemap_api_key,
                 today        : day,
                 region       : JSON.stringify(region)
+//                user         : JSON.stringify(req.query.user),
+//                trace_user   : req.query.trace
                 }
               );
 });
@@ -208,27 +237,35 @@ app.get('/replay/latest/*', function(req, res){
 
     //日付を簡易チェックしてだめなら404
     if (!/^[0-9]{8}$/.test(day)) {
-        res.status(404).send('Sorry, we cannot find that!!');
+        res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
         return;
     }
 
-    try{
-        _file = fs.readFileSync('./wui/json/' + day.substr(0, 4) + '/' + day + '.json.gz');
-    } catch(e){
-        res.status(404).send('Sorry, we cannot find that!!');
-        return;
-    }
-
-    zlib.gunzip(
-        _file,
-        function(err, bin){
-            if (err) {
-                res.status(404).send('Sorry, we cannot find that!!');
-            } else {
-                res.send(bin.toString('utf-8'));
-            }
+    if (global.replay_latest.has(day)){
+        res.send(global.replay_latest.get(day));
+        util.setConsoleInfo("replay_latest from cache.");
+    } else {
+        try{
+            _file = fs.readFileSync('./wui/json/' + day.substr(0, 4) + '/' + day + '.json.gz');
+        } catch(e){
+            res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
+            return;
         }
-    );
+
+        zlib.gunzip(
+            _file,
+            function(err, bin){
+                if (err) {
+                    res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
+                } else {
+                    global.replay_latest.set(day, bin.toString('utf-8'))
+                    res.send(bin.toString('utf-8'));
+                    util.setConsoleInfo("replay_latest from file.");
+                }
+            }
+        );
+    }
+
 });
 
 
@@ -247,27 +284,34 @@ app.get('/replay/nickname/*', function(req, res){
 
     //日付を簡易チェックしてだめなら404
     if (!/^[0-9]{8}$/.test(day)) {
-        res.status(404).send('Sorry, we cannot find that!!');
+        res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
         return;
     }
 
-    try{
-        _file = fs.readFileSync('./wui/json/' + day.substr(0, 4) + '/' + day + '-nickname.json.gz');
-    } catch(e){
-        res.status(404).send('Sorry, we cannot find that!!');
-        return;
-    }
-
-    zlib.gunzip(
-        _file,
-        function(err, bin){
-            if (err) {
-                res.status(404).send('Sorry, we cannot find that!!');
-            } else {
-                res.send(bin.toString('utf-8'));
-            }
+    if (global.replay_nickname.has(day)){
+        res.send(global.replay_nickname.get(day));
+        util.setConsoleInfo("replay_nickname from cache.");
+    } else {
+        try{
+            _file = fs.readFileSync('./wui/json/' + day.substr(0, 4) + '/' + day + '-nickname.json.gz');
+        } catch(e){
+            res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
+            return;
         }
-    );
+
+        zlib.gunzip(
+            _file,
+            function(err, bin){
+                if (err) {
+                    res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
+                } else {
+                    global.replay_nickname.set(day, bin.toString('utf-8'))
+                    res.send(bin.toString('utf-8'));
+                    util.setConsoleInfo("replay_nickname from file.");
+                }
+            }
+        );
+    }
 });
 
 
@@ -284,7 +328,7 @@ app.get('/gpslive', function(req, res){
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
     util.setConsolelog(req);
-    res.redirect(301, '/view');
+    res.redirect(HttpStatus.MOVED_PERMANENTLY, '/view');
 });
 
 
@@ -352,7 +396,7 @@ app.get('/view', function(req, res){
 //リプレイ実装するならそれでいいんじゃないの説
 app.get('/view_data', function(req, res){
     util.setConsolelog(req);
-    res.status(404).send('Sorry, we cannot find that!');
+    res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!');
 });
 
 //ユーザー情報を表示
@@ -361,7 +405,7 @@ app.get('/home/*', function(req, res){
     var userid = req.url.split('/')[2];
 
     if (userid === undefined) {
-        res.status(404).send('Sorry, we cannot find that!!');
+        res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
         return;
     }
 
@@ -369,7 +413,7 @@ app.get('/home/*', function(req, res){
         {userid : userid},
         function (err, result) {
             if (err || result === null) {
-                res.status(404).send('Sorry, we cannot find that!');
+                res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!');
             } else {
                 var username = result.nickname + '(' + userid + ')';
 
@@ -481,7 +525,7 @@ app.post('/create_user', function(req, res){
 //パスワード変更受付
 app.post('/change_password_request', function(req, res){
     util.setConsolelog(req);
-    res.status(404).send('Sorry, we cannot find that!');
+    res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!');
 });
 
 //--------- /user -----------
@@ -491,13 +535,13 @@ app.get('/user/*.png', function(req, res){
     if (config.nickname_saveto_db){
         var filename = req.url.split('/')[2];
         if (filename === undefined) {
-            res.status(404).send('Sorry, we cannot find that!!');
+            res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!!');
             return;
         }
 
         if (global.nickname.has(filename)){
             //キャッシュから取得
-            console.log('nickname ' + filename + ' from caches.');
+            util.setConsoleInfo('nickname ' + filename + ' from caches.');
             var buffer = new Buffer(global.nickname.get(filename), 'base64');
             res.send(buffer, { 'Content-Type': 'image/png' }, 200);
         } else {
@@ -516,7 +560,7 @@ app.get('/user/*.png', function(req, res){
                                     if (/[a-z0-9]{32}\.png/.test(req.url)) {
                                         util.wget('http://replay.imacoconow.com/img'+ req.url,'./wui/img' + req.url);
                                     }
-                                    res.status(404).send('Sorry, we cannot find that!');
+                                    res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!');
                                 } else {
                                     //png形式かチェックする
                                     if (/^iVBO.*/.test(data)) {
@@ -530,25 +574,25 @@ app.get('/user/*.png', function(req, res){
                                             {upsert : true, multi : false },
                                             function(err, results){
                                                 if(err){
-                                                    console.log('convert file:' + filename + ' to dbs. (ERR)');
+                                                    util.setConsoleInfo('convert file:' + filename + ' to dbs. (ERR)');
                                                 } else {
-                                                    console.log('convert file:' + filename + ' to dbs. (OK)');
+                                                    util.setConsoleInfo('convert file:' + filename + ' to dbs. (OK)');
                                                 }
                                             });
                                         } else {
-                                            console.log('nickname ' + filename + ' from files.');
+                                            util.setConsoleInfo('nickname ' + filename + ' from files.');
                                         }
                                         
                                         var buffer = new Buffer(global.nickname.get(filename), 'base64');
                                         res.send(buffer, { 'Content-Type': 'image/png' }, 200);
                                     } else {
-                                        res.status(404).send('Sorry, we cannot find that!');
+                                        res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!');
                                     }
                                 }
                             }
                         );
                     } else {
-                        console.log('nickname ' + filename + ' from dbs.');
+                        util.setConsoleInfo('nickname ' + filename + ' from dbs.');
                         global.nickname.set(filename, result.data);
                         var buffer = new Buffer(result.data, 'base64');
                         res.send(buffer, { 'Content-Type': 'image/png' }, 200);
@@ -562,7 +606,7 @@ app.get('/user/*.png', function(req, res){
             './wui/img' + req.url,
             function(err, data){
                 if (err) {
-                    res.status(404).send('Sorry, we cannot find that!');
+                    res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!');
                 } else {
                     res.send(data, { 'Content-Type': 'image/png' }, 200);
                 }
@@ -592,7 +636,7 @@ app.get('/user', passport.authenticate('basic', { session: false }), function(re
         {userid : req.user.userid},
         function (err, result) {
             if (err || result === null) {
-                res.status(404).send('Sorry, we cannot find that!');
+                res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!');
             } else {
                 res.render('user',
                            {service_name  : config.service_name,
@@ -624,7 +668,7 @@ app.get('/user/gpx', passport.authenticate('basic', { session: false }), functio
     console.log('id:' + req.query.id);
 
     res.set('Content-Type', 'text/xml; charset=utf-8');
-    res.status(404).send('Sorry, we cannot find that!\n' + util.getHash(req.query.id + '0000'));
+    res.status(HttpStatus.NOT_FOUND).send('Sorry, we cannot find that!\n' + util.getHash(req.query.id + '0000'));
 });
 
 //ユーザー情報を更新
@@ -746,7 +790,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
             var client = new locapos(req.user.locapos_token);
             client.locations.update(req.body.lat, req.body.lon, req.body.gpsd, {},
                                     function(err,res) {
-                                        if (res) {console.log('ok');}
+                                        if (res) {util.setConsoleInfo('locapos post OK. user:' + req.user.userid);}
                                     });
         }
 
@@ -754,7 +798,7 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     util.wget('http://localhost/api/getaddress2?lat='+ req.body.lat + '&lon=' + req.body.lon,'/dev/null');
 
         } catch(e){
-            console.log('getaddress error!!');
+            util.setConsoleInfo('getaddress error!!');
         }
 });
 
@@ -923,7 +967,7 @@ app.get('/api/getaddress2',
     function(req, res, next){
         if (!/^localhost/.test(req.headers.host)){
             console.log('[\u001b[33mWARN\u001b[0m] Unauthorized access ' + req.url + '');
-            res.status(418).send('Cannot GET ' + req.url);
+            res.status(HttpStatus.UNAUTHORIZED).send('Cannot GET ' + req.url);
             return;
         } else {
             next();
@@ -1191,7 +1235,7 @@ try{
             case 'http':
                 //サーバー起動(http)
                 http.createServer(app).listen(config.http_listen_port, function(){
-                  console.log('[INFO] ImacocoNow server (http) listening on port: ' + config.http_listen_port);
+                  util.setConsoleInfo('ImacocoNow server (http) listening on port: ' + config.http_listen_port);
                 });
                 break;
             case 'https':
@@ -1202,7 +1246,7 @@ try{
                 };
 
                 https.createServer(options, app).listen(config.https_listen_port, function(){
-                  console.log('[INFO] ImacocoNow server (https) listening on port: ' + config.https_listen_port);
+                    util.setConsoleInfo('ImacocoNow server (https) listening on port: ' + config.https_listen_port);
                 });
                 break;
             default:
@@ -1212,7 +1256,6 @@ try{
 } catch(e){
     console.log(e);
 }
-
 
 
 //===============共通処理 ===============
@@ -1351,6 +1394,11 @@ function getUserList(){
 function getReverseGeocode(req, res){
     util.setConsolelog(req);
 
+    //表示時間
+    var dt = new Date();
+    var formatted = dt.toFormat("YYYY/MM/DD HH24:MI:SS ");
+    var s = '[\u001b[32mINFO\u001b[0m] ' + formatted;
+
     db.GeocodeInfo.find(
         {location : {
             $nearSphere : {
@@ -1371,7 +1419,7 @@ function getReverseGeocode(req, res){
             } else if (results.length === 0){
                 geocoder.reverseGeocode(req.query.lat, req.query.lon, function ( err, data ) {
                     if (data.status === 'OK'){
-                        console.log('geocode from google api.');
+                        util.setConsoleInfo('geocode from google api.');
 
                         var geocode = util.parseGeocode(data.results[0]);
 
@@ -1396,9 +1444,9 @@ function getReverseGeocode(req, res){
                         {upsert : true, multi : false },
                         function(err, results){
                             if(err){
-                                console.log('upsert geocode to dbs. (ERR)');
+                                util.setConsoleInfo('upsert geocode to dbs. (ERR)');
                             } else {
-                                console.log('upsert geocode to dbs. (OK)');
+                                util.setConsoleInfo('upsert geocode to dbs. (OK)');
                             }
                         });
 
@@ -1411,7 +1459,7 @@ function getReverseGeocode(req, res){
                 }, { language: 'ja' });
 
             } else {
-                console.log('geocode from dbs.');
+                util.setConsoleInfo('geocode from dbs.');
                 res.set('Content-Type', 'text/javascript; charset=utf-8');
                 res.send('(' + JSON.stringify(results) + ')');
             }
