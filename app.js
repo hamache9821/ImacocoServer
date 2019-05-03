@@ -177,7 +177,7 @@ app.get('/replay/date/*', function(req, res){
     try{
         day = req.url.split('/')[3].split('?')[0].replace('.json','');
     } catch(e){
-        console.log('error!!');
+        console.log('/replay/date/error!!');
     }
 
     //追跡ユーザ
@@ -232,7 +232,7 @@ app.get('/replay/latest/*', function(req, res){
     try{
          day = req.url.split('/')[3].split('?')[0].replace('.json','');
     } catch(e){
-        console.log('error!!');
+        console.log('/replay/latest/error!!');
     }
 
     //日付を簡易チェックしてだめなら404
@@ -279,7 +279,7 @@ app.get('/replay/nickname/*', function(req, res){
     try{
          day = req.url.split('/')[3].split('?')[0].replace('.json','');
     } catch(e){
-        console.log('error!!');
+        console.log('/replay/nickname/error!!');
     }
 
     //日付を簡易チェックしてだめなら404
@@ -1119,7 +1119,7 @@ app.get('/api/replay/latest/*', function(req, res){
     try{
          day = req.url.split('/')[4].replace('.json','');
     } catch(e){
-        console.log('error!!');
+        console.log('/api/replay/latest/error!!');
     }
 
     //日付を簡易チェックしてだめなら当日を入れる
@@ -1189,7 +1189,7 @@ app.get('/api/replay/nickname/*', function(req, res){
     try{
          day = req.url.split('/')[4].replace('.json','');
     } catch(e){
-        console.log('error!!');
+        console.log('/api/replay/nickname/error!!');
     }
 
     //日付を簡易チェックしてだめなら当日を入れる
@@ -1318,7 +1318,7 @@ function getLatest(){
         //現在オンラインのユーザー探す
         db.LocInfo.distinct(
             "user",
-            { time:{"$gte" : util.addMinutes(new Date, -5)}},
+            { time:{"$gte" : util.addMinutes(new Date, -5), "$lte" : util.addMinutes(new Date, 1)}},
             function(err, result){
                 //何かしらのエラー
                 if (err) {
@@ -1337,7 +1337,7 @@ function getLatest(){
                 //オンラインユーザの直近の位置を取得
                 for (var i = 0; i < result.length; i++) {
                     db.LocInfo.find(
-                        {user : result[i], time:{"$gte" : util.addMinutes(new Date, -5)}},
+                        {user : result[i], time:{"$gte" : util.addMinutes(new Date, -5), "$lte" : util.addMinutes(new Date, 1)}},
                         {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0, allow_replay : 0},
 
                         function(err, results){
@@ -1540,7 +1540,7 @@ function getRelayData(){
                             });
                         }
                     } catch(e){
-                        console.log('error!! getRelayData');
+                        console.log('getRelayData(locinfo) error!!');
                     }
                 });
             }).on('error', function(e){
@@ -1578,16 +1578,24 @@ function getRelayData(){
                     }
 
                     try{
-                        var latest = JSON.parse(body.slice(1,body.length -1));
+                        var latest = '';
+                        if(!body.indexOf('('))
+                        {
+                            latest = JSON.parse(body.slice(1,body.length -1));
+                        }
+                        else
+                        {
+                            latest = JSON.parse(body);
+                        }
                         var points = latest.points;
-                        
+
                         for (var x = 0; x < points.length; x++){
                             //nickname画像生成 todo uid重複チェック
                             //リプレイと同じでMD5に統一する予定
                             var filename = util.getUserNameImg(points[x].user, points[x].nickname, '#f5f6ce');
                         }
                     } catch(e){
-                        console.log('error!!');
+                        console.log('getRelayData(getUserNameImg) error!!');
                     }
                 });
             }).on('error', function(e){
