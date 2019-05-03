@@ -48,13 +48,23 @@
 
 $(document).ready(function() { // [ADD]
 
+google.maps.LatLng.prototype.latRadians = function()
+{
+  return (Math.PI * this.lat()) / 180;
+}
+
+google.maps.LatLng.prototype.lngRadians = function()
+{
+  return (Math.PI * this.lng()) / 180;
+}
+
+
 //グローバル変数
 var map;
 var markeropts;
 var geocoder;
 var share_markers = new Array();
 
-var map_style = '';
 var hidelist = 0;
 var plotmode = 0;	// 0=軌跡表示しない、1=点、2=線
 var plotcount = 1000;
@@ -68,10 +78,12 @@ var apiview = 0;
 var prev_trace = "";
 
 var static_file_site = '/img/'; // [CHANGE]
-var api_site = 'http://imacoco.589406.com';
+var api_site = 'http://' + location.hostname;
 
 var timer;
 var datetimebox;
+var plot_icon;
+var icon_image_value = 11;
 
 
 var USTERAM_TV = 'live';
@@ -84,415 +96,466 @@ var startPoint = new google.maps.LatLng(35, 137);
 var nowPoint = new google.maps.LatLng(35, 137);
 var userExist = false;
 var distance = new Array();
-var hougaku = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
+var direction = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
 
-//-------------------------------------------------------------
-// 移動したかどうかをチェックする(1m以上移動したかどうか)
+var new_styles = {
+		'night': [
+		  {
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#242f3e"
+			  }
+			]
+		  },
+		  {
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#746855"
+			  }
+			]
+		  },
+		  {
+			"elementType": "labels.text.stroke",
+			"stylers": [
+			  {
+				"color": "#242f3e"
+			  }
+			]
+		  },
+		  {
+			"featureType": "administrative.locality",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#d59563"
+			  }
+			]
+		  },
+		  {
+			"featureType": "poi",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#d59563"
+			  }
+			]
+		  },
+		  {
+			"featureType": "poi.park",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#263c3f"
+			  }
+			]
+		  },
+		  {
+			"featureType": "poi.park",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#6b9a76"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#38414e"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road",
+			"elementType": "geometry.stroke",
+			"stylers": [
+			  {
+				"color": "#212a37"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#9ca5b3"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road.highway",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#746855"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road.highway",
+			"elementType": "geometry.stroke",
+			"stylers": [
+			  {
+				"color": "#1f2835"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road.highway",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#f3d19c"
+			  }
+			]
+		  },
+		  {
+			"featureType": "transit",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#2f3948"
+			  }
+			]
+		  },
+		  {
+			"featureType": "transit.station",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#d59563"
+			  }
+			]
+		  },
+		  {
+			"featureType": "water",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#17263c"
+			  }
+			]
+		  },
+		  {
+			"featureType": "water",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#515c6d"
+			  }
+			]
+		  },
+		  {
+			"featureType": "water",
+			"elementType": "labels.text.stroke",
+			"stylers": [
+			  {
+				"color": "#17263c"
+			  }
+			]
+		  }
+		]
+};
+
+// 初期化処理
+function initialize()
+{
+	if (isDefined('api_view'))
+	{
+		apiview = api_view;
+	}
+
+	if (isDefined('hide_userlist') && hide_userlist) {
+		var ul = document.getElementById('right');
+		if (ul) {
+			ul.style.display = 'none';
+		}
+		var footer = document.getElementById('footer');
+		if (footer) {
+			footer.style.display = 'none';
+		}
+		hidelist = 1;
+	}
+
+	if (isDefined('map_maximize') && map_maximize)
+	{
+		window.onresize = function()
+		{
+			resize();
+		}
+		resize();
+	}
+
+	// Google Maps API v3
+	if(map_style){
+		if (new_styles[map_style]){
+			map = new google.maps.Map(document.getElementById('map'), {
+				mapTypeControlOptions: {
+					mapTypeIds: [google.maps.MapTypeId.ROADMAP
+					, google.maps.MapTypeId.SATELLITE
+					, map_style]
+				},
+				center : new google.maps.LatLng(35.658634, 139.745411),
+				mapTypeId: map_style,
+				scaleControl : true,
+				streetViewControl : false,
+				zoom : 10
+			});
+
+		}else{
+			map = new google.maps.Map(document.getElementById('map'), {
+				mapTypeControlOptions: {
+					mapTypeIds: [google.maps.MapTypeId.ROADMAP
+					, google.maps.MapTypeId.SATELLITE
+					, map_style]
+				},
+				center : new google.maps.LatLng(35.658634, 139.745411),
+				mapTypeId: map_style,
+				scaleControl : true,
+				streetViewControl : false,
+				zoom : 10
+			});
+		}
+
+		if(map_style == "OSM"){
+			var mapTypeIds = [];
+			for(var type in google.maps.MapTypeId) {
+				mapTypeIds.push(google.maps.MapTypeId[type]);
+			}
+			mapTypeIds.push("OSM");
+			
+			map.mapTypes.set("OSM", new google.maps.ImageMapType({
+				getTileUrl: function(coord, zoom) {
+					return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
+				},
+				tileSize: new google.maps.Size(256, 256),
+				name: "OpenStreetMap",
+				maxZoom: 18
+			}));
+		}else{
+			var styledMapType = new google.maps.StyledMapType(new_styles[map_style], {name: map_style});
+			map.mapTypes.set(map_style, styledMapType);
+		}
+	}else{
+		map = new google.maps.Map(document.getElementById('map'), {
+			center : new google.maps.LatLng(35.658634, 139.745411),
+			mapTypeId : google.maps.MapTypeId.ROADMAP,
+			scaleControl : true,
+			streetViewControl : false,
+			zoom : 10
+		});
+
+	}
+
+	map.mapTypes.set("OSM", new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
+        },
+        tileSize: new google.maps.Size(256, 256),
+        name: "OpenStreetMap",
+        maxZoom: 18
+    }));
+
+	geocoder = new google.maps.Geocoder()
+
+	if (!isDefined('use_zoom')) {
+		use_zoom = 2;
+	}
 /*
-function checkMoving(lat_from, lon_from, lat_to, lon_to)
-{
-	var from = new google.maps.LatLng(lat_from, lon_from);
-	var to = new google.maps.LatLng(lat_to, lon_to);
-	return to.distanceFrom(from) > 1;
-}
+	if (!isDefined('use_zoom') || use_zoom) {
+		if ($(document.body).innerHeight() > 600) { // [CHANGE]
+			map.addControl(new GLargeMapControl(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(5, 50))); // [CHANGE]
+		} else { // [CHANGE]
+			map.addControl(new GSmallMapControl(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(5, 50))); // [CHANGE]
+		}
+		map.enableContinuousZoom();
+		map.enableDoubleClickZoom();
+		map.enableScrollWheelZoom();
+		google.maps.event.addDomListener(map, "DOMMouseScroll", CancelEvent); // Firefox
+		google.maps.event.addDomListener(map, "mousewheel",     CancelEvent); // IE
+	}
 */
-// 注意：簡易的に緯度経度の変化のみ見ることにする
-function checkMoving(lat_from, lon_from, lat_to, lon_to) {
-	return (lat_from != lat_to || lon_from != lon_to);
-}
+/*
+	controlGMapType = new GMapTypeControl(); // [CHANGE]
+	map.addControl(controlGMapType, new ControlPosition(G_ANCHOR_TOP_RIGHT, new google.maps.Size(315, 5))); // [CHANGE]
+	map.addControl(new GScaleControl(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(75, 90))); // [CHANGE]
+*/
+//	new GKeyboardHandler(map); // [ADD]
 
-
-// グローバル変数が定義済みかどうか
-// objを指定すると、obj.vが定義済みかどうかを判定
-// 指定がない場合はwindow.v(グローバル変数v)が定義済みかどうかを判定
-function isDefined(v, obj)
-{
-	if (obj == undefined) {
-		obj = 'window';
+	// [ADD]
+	if(!movie_enable){
+//		map.removeControl(controlGMapType);
+//		map.addControl(controlGMapType, new ControlPosition(G_ANCHOR_TOP_RIGHT, new google.maps.Size(10, 5)));
+		$("#info").css("right", 10);
 	}
-	var ret = typeof(eval(obj)[v]) != 'undefined';
-//	alert('variable ' + obj + '.' + v + ' is ' + (ret ? 'defined' : 'undefined'));
-	return ret;
-}
 
-// メッセージ出力
-function setMessage(mesg)
-{
-	var msg = document.getElementById('msg');
-	if (msg)
+	if (!isDefined('use_minimap') || use_minimap)
 	{
-		msg.innerHTML = mesg;
+//		map.addControl(new GOverviewMapControl());
 	}
-}
 
-// 現在時刻文字列作成
-function makeTimeString()
-{
-	var mySysDate = new Date();
-	var myYear = mySysDate.getFullYear();
-	var myMonth = mySysDate.getMonth()+1;
-	var myDate = mySysDate.getDate();
-	var myHour = mySysDate.getHours();
-	var myMin = mySysDate.getMinutes();
-	var mySec = mySysDate.getSeconds();
-	if (myMonth < 10) { myMonth = "0" + myMonth; }
-	if (myDate < 10) { myDate = "0" + myDate; }
-	if (myHour < 10) { myHour = "0" + myHour; }
-	if (myMin < 10) { myMin = "0" + myMin; }
-	if (mySec < 10) { mySec = "0" + mySec; }
-	return myYear + '-' + myMonth + '-' + myDate + ' ' + myHour + ':' + myMin + ':' + mySec;
-}
+//	map.addControl(new SignatureBox(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(75, 45))); // [CHANGE]
+	// map.addControl(new DateTimeBox()); // [CHANGE]
 
-// マーカーを消す
-function removeUserMarker(user)
-{
-	if (typeof(user.prev_marker) != 'undefined')
+	// datetimebox = document.getElementById("DateTime"); // [CHANGE]
+
+	// google.maps.event.addListener(map, "click", openMenu);
+	// google.maps.event.addListener(map, "mousedown", updateOff);
+
+	if (isDefined('map_region'))
 	{
-		map.removeOverlay(user.prev_marker);
-		user.prev_marker = undefined;
-	}
-	if (user.prev_marker2 != undefined)
-	{
-		map.removeOverlay(user.prev_marker2);
-	}
-	if (user.polyline != undefined)
-	{
-		map.removeOverlay(user.polyline);
-	}
-	while (user.track.length > 0) {
-		var mk = user.track.shift();
-		map.removeOverlay(mk);
-	}
-	if (user.stream_marker)
-	{
-		map.removeOverlay(user.stream_marker);
-		user.stream_marker = undefined;
-	}
-	user.lat = 0;
-	user.lon = 0;
-}
+		var min_lat = 91;
+		var min_lon = 181;
+		var max_lat = -91;
+		var max_lon = -181;
 
-var iconImage = [
-	{ 'path':'/car', 'direction': true, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':10,
-		'path2':'/middle_arrow/arrow-', 'w2':52, 'h2':52, 'ax2':26, 'ay2':26, 'wax2':26, 'way2':20 },
-	{ 'path':'/keitai', 'direction': false, 'ext':'.png', 'w':20, 'h':45, 'ax':10, 'ay':23, 'wax':10, 'way':18 },
-	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/plane', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
-	{ 'path':'/train', 'direction': false, 'ext':'.png', 'w':55, 'h':45, 'ax':28, 'ay':23, 'wax':28, 'way':19 },
-	{ 'path':'/shinkansen', 'direction': false, 'ext':'.png', 'w':44, 'h':42, 'ax':22, 'ay':21, 'wax':22, 'way':17 },
-	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/bus', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
-	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/cycling', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
-	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/hiker', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
-	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/motorcycling', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
-	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/helicopter', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
-	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/ferry', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
-];
-
-
-var defaultDirectionIcon = new Array();
-var directionIcon = new Array();
-
-
-// streamマーカーの作成
-function makeStreamMarker(stream, pt)
-{
-	var ic = new google.maps.MarkerImage();
-	if (stream == 'live') {
-		// ustream.tv
-		ic.image = static_file_site + 'ustream.png';
-	} else if (stream == 'justin.tv') {
-		// justin.tv
-		ic.image = static_file_site + 'justin.png';
-	} else if (stream.match(/^nicolive/)) {
-		// ニコニコ生放送
-		ic.image = static_file_site + 'nicolive.png';
-	}
-	ic.iconSize = new google.maps.Size(16, 16);
-	ic.iconAnchor = new google.maps.Point(-8, -8);
-	ic.infoWindowAnchor = new google.maps.Point(0, 0);
-
-	var opt = new Object;
-	opt.icon = ic;
-	opt.clickable = false;
-	opt.draggable = false;
-
-	var marker = new google.maps.Marker(pt, opt);
-	marker.type = stream;
-	return marker;
-}
-
-//現在地アイコンの作成
-function makeDirectionIcon(td, type)
-{
-	var ic = new google.maps.MarkerImage();
-	var icm;
-
-	if (iconImage[type])
-	{
-		icm = iconImage[type];
+		for (var idx in map_region)
+		{
+			if (map_region[idx].lat < min_lat) { min_lat = map_region[idx].lat; }
+			if (max_lat < map_region[idx].lat) { max_lat = map_region[idx].lat; }
+			if (map_region[idx].lon < min_lon) { min_lon = map_region[idx].lon; }
+			if (max_lon < map_region[idx].lon) { max_lon = map_region[idx].lon; }
+		}
+		var avg_lat = (min_lat + max_lat) / 2;
+		var avg_lon = (min_lon + max_lon) / 2;
+		var ct = new google.maps.LatLng(avg_lat, avg_lon);
+		// 全体が表示できる矩形座標を計算
+		var region = new google.maps.LatLngBounds(new google.maps.LatLng(min_lat, min_lon), new google.maps.LatLng(max_lat, max_lon));
+		// 全体が表示できるように位置とズームを設定
+		map.setCenter(ct, map.getBoundsZoomLevel(region));
+		center = ct;
 	}
 	else
 	{
-		icm = iconImage[0];
+		var point = new google.maps.LatLng(35.658634, 139.745411); // 初期位置は東京タワー
+		map.setCenter(point, 14);
+		center = point;
 	}
 
-	if (!isNaN(td) && icm.direction)
+	if (isDefined('use_rmenu') && use_rmenu)
 	{
-		ic.image = static_file_site + icm.path2 + String(parseInt(td)) + icm.ext;
-		ic.iconSize = new google.maps.Size(icm.w2, icm.h2);
-		ic.iconAnchor = new google.maps.Point(icm.ax2, icm.ay2);
-		ic.infoWindowAnchor = new google.maps.Point(icm.wax2, icm.way2);
+		rmenu = document.createElement("div");
+		var MapPX = map.getSize();
+
+		//右クリックメニューのスタイルを設定。
+		rmenu.style.visibility = "hidden";
+		rmenu.style.backgroundColor = "white";
+		rmenu.style.border = "2px solid black";
+		rmenu.style.padding = "2px";
+		rmenu.style.fontSize = "12px";
+		rmenu.style.cursor = "pointer";
+
+		//右クリックメニューの内容(HTML）
+		rmenu.innerHTML = "<div onclick='putMarker()'>この場所を共有する</div><hr>"
+		                + "<div onclick='openSearchWindow()'>Googleマップで検索</div>";
+
+		//右クリックメニューをmap内に返す
+		map.getContainer().appendChild(rmenu);
+
+		//右クリック位置を取得してメニューを表示するイベント。pointはgoogle.maps.Size(x,y)で返される。
+		google.maps.event.addListener(map, "singlerightclick", function(point) {
+			updateOff();
+			var rmenux = point.x;
+			var rmenuy = point.y;
+			var latlng = map.fromContainerPixelToLatLng(point)
+			rmenu_lat = latlng.lat();
+			rmenu_lon = latlng.lng();
+
+			//MapPX.width、MapPX.heightの後の74・86はメニュー全体の横幅・縦幅。
+			if(rmenux > (MapPX.width - 74)) { rmenux = MapPX.width - 74; }
+			if(rmenuy > (MapPX.height - 86)) { rmenuy = MapPX.height - 86; }
+			var rmenu_pos = new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(rmenux, rmenuy));
+			rmenu_pos.apply(rmenu);
+			rmenu.style.visibility = "visible";
+		});
+
+		//地図上を左クリックしたらメニューが消える。
+		google.maps.event.addListener(map, "click", function()
+			{
+				if (rmenu.style.visibility == "visible"){
+					rmenu.style.visibility = "hidden";
+				}
+				if (!map.infoWindowEnabled())
+				{
+					updateOn();
+				}
+			}
+		);
+	}
+
+	var icon = new google.maps.MarkerImage();
+	icon.image = static_file_site + "aka.png";
+	icon.iconSize = new google.maps.Size(4, 4);
+	icon.iconAnchor = new google.maps.Point(0, 0);
+	// プロットアイコン
+	plot_icon = new google.maps.MarkerImage(
+		'/img/aka.png',
+		new google.maps.Size(4, 4),
+		null,
+		new google.maps.Point(2, 2)
+	);
+
+	// 標準マーカーの作成
+	for ( var i = 0; i < 120; i++) {
+		defaultDirectionIcon[i] = makeDirectionIcon(i, 0);
+	}
+	for ( var i = 0; i < icon_image_value; i++) {
+		directionIcon[i] = makeDirectionIcon(NaN, i);
+	}
+
+	markeropts = new Object();
+	markeropts.icon = icon;
+	markeropts.clickable = false;
+
+	if (isDefined('plot_mode'))
+	{
+		plotmode = plot_mode;
+	}
+
+	if (isDefined('plot_count'))
+	{
+		plotcount = plot_count;
+	}
+
+	if (isDefined('from_top'))
+	{
+		fromtop = from_top;
+	}
+
+	users = new Object();
+	if (hidelist)
+	{
+		if (isDefined('user_list') && user_list[0] == 'all')
+		{
+			setTraceUser('all');
+		}
 	}
 	else
 	{
-		if (icm.path.substring(0, 7) == "http://") {
-			ic.image = icm.path + icm.ext;
-		} else {
-			ic.image = static_file_site + '/' + icm.path + icm.ext;
-		}
-		ic.iconSize = new google.maps.Size(icm.w, icm.h);
-		ic.iconAnchor = new google.maps.Point(icm.ax, icm.ay);
-		ic.infoWindowAnchor = new google.maps.Point(icm.wax, icm.way);
-	}
-	return ic;
-}
-
-
-//現在地アイコンの作成
-function getDirectionIcon(td, type, username)
-{
-	if (!isNaN(td) && type == 0)
-	{
-		td = Math.round(td);
-		td %= 360;
-		return defaultDirectionIcon[td];
-	}
-	else if (type == 99)
-	{
-		if(users[username].twitter_icon == 'no_twitter_id')
+		if (!isDefined('user_list'))
 		{
-			return directionIcon[0];
+		//	loadUserList(false);
 		}
-		else if (users[username].twitter_icon)
+		else if (user_list[0] == 'all')
 		{
-			return users[username].twitter_icon;
+		//	loadUserList(true);
+			setTraceUser('all');
 		}
 		else
 		{
-			var req = GXmlHttp.create();
-			req.open("GET", api_site + "/api/getuserinfo?user=" + username +"&t="+ new Date().getTime() , false);
-			req.send();
-			if (req.readyState == 4 && req.status == 200 && req.responseText != "")
+			for (var u in user_list)
 			{
-				var res = eval(req.responseText);
-				// 情報ウィンドウ内のHTML
-				if (res && res.result)
-				{
-					if (res.twitter_image_url) {
-						var ic = new google.maps.MarkerImage();
-						ic.image = res.twitter_image_url;
-						ic.iconSize = new google.maps.Size(32, 32);
-						ic.iconAnchor = new google.maps.Point(16, 16);
-						ic.infoWindowAnchor = new google.maps.Point(16, 16);
-						users[username].twitter_icon = ic;
-					} else {
-						users[username].twitter_icon = 'no_twitter_id';
-					}
-				}
-			}
-			if (users[username].twitter_icon && users[username].twitter_icon != 'no_twitter_id')
-			{
-				return users[username].twitter_icon
-			}
-			else
-			{
-				return directionIcon[0];
+				initUser(user_list[u], true);
 			}
 		}
 	}
-	else
-	{
-		return directionIcon[type]
-	}
+	setTimeout(load_next, 10);
 }
-
-
-// マーカー
-function createClickableMarker(pt, opts, username)
-{
-	var mk = new google.maps.Marker(pt, opts);
-	mk.user = username; // イベントで使う
-	// 現在時刻（情報ウィンドウ内に表示）
-	mk.plottime = makeTimeString();
-
-	// 情報ウィンドウを閉じたときのイベント
-	google.maps.event.addListener(mk, 'infowindowclose', function()
-	{
-		mk.hasInfoWindow = false;
-		setTraceUser(prev_trace);
-		prev_trace = "";
-	});
-
-	// マーカーをクリックしたときのイベント
-	google.maps.event.addListener(mk, 'click', function()
-	{
-		var txt = "";
-		if (!users[mk.user].user_info || users[mk.user].user_info == "") {
-			// ユーザー情報がなければサーバからとってくる
-			var req = GXmlHttp.create();
-			req.open("GET",api_site +  "/api/getuserinfo?user=" + mk.user +"&t="+ new Date().getTime() , false);
-			req.send("");
-			if (req.status == 200 && req.responseText != "")
-			{
-				var res = eval(req.responseText);
-				// 情報ウィンドウ内のHTML
-				if (res && res.result)
-				{
-					var txt;
-					if (res.popup) {
-						txt =
-							"<div id='infowindow' style='width:240px'><a href='/gpslive/%user%'>%user%</a>%liveinfo%<hr>" + // [CHANGE]
-							res.popup +
-							"</div>";
-					} else {
-						txt =
-							"<div id='infowindow' style='width:240px'><a href='/gpslive/%user%'>%user%</a>%liveinfo%<hr>" + // [CHANGE]
-							"最終表示時刻 %plottime%\\n%profile%\\n%userweb%\\n%twitter%\\n%ustream%" +
-							"</div>";
-					}
-					users[mk.user].jtv = res.jtv
-					users[mk.user].ust = res.ust
-					txt = txt.replace('%profile%', res.url ? '<a target="_blank" href="http://imakoko-gps.appspot.com/home/' + mk.user + '">profile</a>' : ''); // [CHANGE]
-					txt = txt.replace('%userweb%', res.url ? '<a target="_blank" href="' + res.url + '">HomePage</a>' : '');
-					txt = txt.replace('%twitter%', res.twitter ? '<a target="_blank" href="http://twitter.com/' + res.twitter + '">' + res.twitter + ' on Twitter</a>' : '');
-					txt = txt.replace('%ustream%', res.ust ? '<a target="_blank" href="http://www.ustream.tv/channel/' + res.ust + '">' + res.ust + ' on USTREAM</a>' : '');
-					txt = txt.replace('%justin%', res.jtv ? '<a target="_blank" href="http://www.justin.tv/' + res.jtv + '">' + res.jtv + ' on Justin.tv</a>' : '');
-					users[mk.user].user_info = txt;
-				}
-				else
-				{
-					users[mk.user].user_info = "情報の取得に失敗しました";
-				}
-			}
-			else
-			{
-				users[mk.user].user_info = "情報の取得に失敗しました";
-			}
-		}
-
-		for (var user in users)
-		{
-			if (users[user].prev_marker)
-			{
-				users[user].prev_marker.hasInfoWindow = false;
-			}
-		}
-
-		users[mk.user].prev_marker.hasInfoWindow = true;
-		users[mk.user].prev_marker.openInfoWindowHtml(updateInformation(mk.user));
-		if (prev_trace == "")
-		{
-			prev_trace = traceuser;
-		}
-		setTraceUser(mk.user, 14);
-	});
-	return mk;
-}
-
-function createSharedMarker(pt, key, desc)
-{
-	var marker = new google.maps.Marker(pt);
-	google.maps.event.addListener(marker, 'click', function()
-		{
-			updateOff();
-			marker.openInfoWindowHtml('<div><pre>' + desc + '</pre></div><hr><div><button onClick=\"removeSharedMarker(\''+key+'\')\">削除</button></div>');
-		}
-	);
-	google.maps.event.addListener(marker, 'infowindowclose', function()
-		{
-			updateOn();
-		}
-	);
-	return marker;
-}
-
-function removeSharedMarker(key)
-{
-	if (!isDefined('group_name') || group_name == '')
-	{
-		alert('グループ表示モードではありません');
-		return;
-	}
-
-	var req = GXmlHttp.create();
-	req.open("GET", "/user/deletemarker?group=" + encodeURIComponent(group_name) + "&key=" + key , false);
-	req.send("");
-	if (req.status != 200 || req.responseText == "")
-	{
-		alert('サーバでエラーが発生しました');
-		return false;
-	}
-	var res = eval(req.responseText);
-	// 情報ウィンドウ内のHTML
-	if (res && res.result)
-	{
-		map.removeOverlay(share_markers[key].marker);
-		delete share_markers[key];
-		alert('削除しました');
-		return true;
-	}
-	else
-	{
-		alert('サーバでエラーが発生しました:' + res.errmsg);
-		return false;
-	}
-}
-
-function updateInformation(user)
-{
-	var txt = users[user].user_info.
-		replace(/%user%/g, user).
-		replace(/%plottime%/g, makeTimeString()).
-		replace(/%latitude%/g, users[user].prev_point.lat()).
-		replace(/%longitude%/g, users[user].prev_point.lng()).
-		replace(/%direction%/g, users[user].td).
-		replace(/%altitude%/g, users[user].altitude).
-		replace(/\\n/g, "<br>").
-		replace(/%hr%/g, "<hr>");
-
-	if (users[user].broadcast) {
-		var bc = users[user].broadcast;
-		if (bc == 'live' && users[user].ust) {
-			txt = txt.replace('%liveinfo%', '&nbsp;<a target="_blank" href="http://www.ustream.tv/channel/' + users[user].ust + '"><b>LIVE on USTREAM.tv</b></a>');
-			txt = txt.replace('%nicolive%', '');
-		} else if (bc == 'justin.tv' && users[user].jtv) {
-			txt = txt.replace('%nicolive%', '');
-			txt = txt.replace('%liveinfo%', '&nbsp;<a target="_blank" href="http://www.justin.tv/' + users[user].jtv + '"><b>LIVE on Justin.tv</b></a>');
-		} else if( users[user].broadcast.match(/^nicolive:(.+)/)) {
-			nicolive = RegExp.$1;
-			txt = txt.replace('%nicolive%', '<a target="_blank" href="http://live.nicovideo.jp/watch/lv' + nicolive + '">ニコニコ生放送中</a>');
-			txt = txt.replace('%liveinfo%', '&nbsp;<a target="_blank" href="http://live.nicovideo.jp/watch/lv' + nicolive + '"><b>ニコニコ生放送中</b></a>');
-		} else {
-			txt = txt.replace('%nicolive%', '');
-			txt = txt.replace('%liveinfo%', '');
-		}
-	} else {
-		txt = txt.replace('%nicolive%', '');
-		txt = txt.replace('%liveinfo%', '');
-	}
-
-	if (users[user].velocity || users[user].velocity == 0) {
-		txt = txt.replace(/%velocity%/g, users[user].velocity);
-	} else {
-		txt = txt.replace(/%velocity%/g, '非公開');
-	}
-
-	var t = document.getElementById('infowindow');
-	if (t) {
-		t.innerHTML = txt;
-	}
-	return txt;
-}
-
 
 // 地図のスクロールとマーキング
 function update()
@@ -530,12 +593,7 @@ function update()
 		}
 	}
 	// 位置情報を取得する
-/*
-	var request = GXmlHttp.create();
-	request.open("GET",api_site +  "/api/latest?"+ ul + "&for_top=" + (fromtop ? "1" : "0") + "&t="+ new Date().getTime() , true);
-	request.onreadystatechange = 
-*/
-	$.getJSON(api_site +  "/api/latest?"+ ul + "&for_top=" + (fromtop ? "1" : "0"),
+	$.getJSON(api_site +  "/api/latest?escape=0&"+ ul + "&for_top=" + (fromtop ? "1" : "0"),
 		{
 			t : new Date().getTime()
 		},
@@ -639,6 +697,10 @@ function update()
 				var td = parseFloat(data.dir);
 				var velocity = parseFloat(data.velocity);
 				var altitude = parseFloat(data.altitude);
+				var type = parseInt(data.type);
+				if(type != 99 && (type < 0 || type > 10)){
+					type = 0;
+				}
 
 				// 距離計算用配列に格納 // [ADD]
 				var nickname = data.nickname;
@@ -657,105 +719,81 @@ function update()
 				// 前回の座標と違った場合はプロットする
 				if (checkMoving(user.lat, user.lon, lat, lon))
 				{
-					// 現在位置に置くマーカー
-					var opts = new Object();
-					opts.icon = getDirectionIcon(td, data.type, username);
-					opts.title = username;
+					// 現在地アイコンマーカー
+					if(user.direction_marker){
+						user.direction_marker.setIcon(getDirectionIcon(td, type, username));
+						user.direction_marker.setPosition(pt);
+					} else {
+						user.direction_marker = createClickableMarker(pt, username);
+						user.direction_marker.setIcon(getDirectionIcon(td, type, username));
+					}
 
-					// 現在位置マーカー
-					var mk = createClickableMarker(pt, opts, username);
+					// ニックネームマーカー
+					if(user.nick_marker){
+						user.nick_marker.setPosition(pt);
+					} else {
+						user.nick_marker = new google.maps.Marker( {
+							clickable : false,
+							icon : user.nick_icon,
+							position : pt,
+							map : map,
+							zIndex : 3
+						});
+					}
 
-					// Broadcastマーカー
-					if (data.ustream_status && data.ustream_status != "offline") {
-						if (!user.stream_marker || user.stream_marker.type != data.ustream_status) {
-							var stream_marker = makeStreamMarker(data.ustream_status, pt);
-							if (user.stream_marker) {
-								map.removeOverlay(user.stream_marker);
+					// ストリームマーカー
+					if(user.stream_marker) {
+						if(data.ustream_status && data.ustream_status != 'offline') {
+							if (user.stream_status != ustream_status) {
+								user.stream_marker.setMap(null);
+								user.stream_marker = makeStreamMarker(data.ustream_status, pt);
+							} else {
+								user.stream_marker.setPosition(pt);
 							}
-							user.stream_marker = stream_marker;
-							map.addOverlay(user.stream_marker);
 						} else {
-							user.stream_marker.setLatLng(pt);
+							user.stream_marker.setMap(null);
 						}
 					} else {
-						if (user.stream_marker) {
-							map.removeOverlay(user.stream_marker)
-							user.stream_marker = 0;
+						if(data.ustream_status && data.ustream_status != 'offline') {
+							user.stream_marker = makeStreamMarker(data.ustream_status, pt);
 						}
 					}
-					user.broadcast = data.ustream_status
 
-					// ニックネームのマーカー
-					var mk1 = new google.maps.Marker(pt, user.user_markeropts);
-
-					// 前回配置したニックネームマーカーを削除
-					if (user.prev_marker2 != undefined)
-					{
-						map.removeOverlay(user.prev_marker2);
+					// トラッキングのプロットとパス
+					user.plot.push(pt);
+					if (user.plot.length > plotcount) {
+						user.plot.shift();
 					}
 
-					var hasInfoWindow = false;
-					var prev_trace_tmp = prev_trace;
-					var current_trace = traceuser;
-					if (user.prev_marker != undefined)
-					{
-						// 情報ウィンドウを持っていたかどうか
-						hasInfoWindow = user.prev_marker.hasInfoWindow ? user.prev_marker.hasInfoWindow : false;
+					if(plotmode == 1) {
+						var marker = new google.maps.Marker( {
+							clickable : false,
+							icon : plot_icon,
+							position : pt,
+							map : map,
+							zIndex : 0
+						});
+						user.plot_markers.push(marker);
 
-						if (plotmode == 1)
-						{
-							// 描画モードが点
-							// ひとつ前の場所に点を打つ
-							var mk2 = new google.maps.Marker(user.prev_point, user.markeropts);
-							map.addOverlay(mk2);
-							user.track.push(mk2);
-
-							// プロット数を制限する
-							if (user.track.length > plotcount) {
-								mk2 = user.track.shift();
-								map.removeOverlay(mk2);
-							}
+						if(user.plot_markers.length > plotcount) {
+							marker = user.plot_markers.shift();
+							marker.setMap(null);
 						}
-						else if (plotmode == 2)
-						{
-							// 描画モードが線
-							// 前のラインを削除
-							map.removeOverlay(user.polyline);
-						}
-						// 一つ前の現在位置マーカーを削除
-						map.removeOverlay(user.prev_marker);
-					}
-
-					if (plotmode == 2)
-					{
-						// 描画モードが線
-						// 新しくラインを描画
-						pl = createEncodedPolyline(user, pt);
-						map.addOverlay(pl);
-						user.polyline = pl;
-					}
-					// 新たに現在位置マーカーとニックネームマーカーを描画
-					map.addOverlay(mk);
-					map.addOverlay(mk1);
-
-					if (hasInfoWindow)
-					{
-						// 情報ウィンドウを再表示する
-						mk.openInfoWindowHtml(updateInformation(username));
-						mk.hasInfoWindow = true;
-						prev_trace = prev_trace_tmp;
-						setTraceUser(current_trace);
+					} else if(plotmode == 2) {
+						user.plot_path.setPath(user.plot);
+						user.plot_path.setMap(map);
 					}
 
 					// 次回のためにマーカーと位置情報を保存
-					user.prev_marker = mk;
-					user.prev_marker2 = mk1;
-					user.prev_point = pt;
+					user.nickname = nickname;
 					user.lat = lat;
 					user.lon = lon;
 					user.td = td;
 					user.altitude = altitude;
 					user.velocity = velocity;
+					user.type = type;
+					user.ustream_status = data.ustream_status;
+
 
 					if (user.trace)
 					{
@@ -859,7 +897,11 @@ function update()
 					distanceLengthMax = distanceSort.length;
 			}
 			for(var i=0;i<distanceLengthMax;i++){
-				tmp += '<tr><td class="nickname"><a href="/gpslive/' + distanceSort[i].key + '">' + distance[distanceSort[i].key].nickname + '</a></td><td class="houi"><img src="' + static_file_site + 'green_arrow/arrow-' + distance[distanceSort[i].key].houi + '.png" height="16" width="16" /> ' + hougaku[distance[distanceSort[i].key].houi] + '</td><td class="kyori">' + distance[distanceSort[i].key].kyori + '</td></tr>';
+				tmp += '<tr><td class="nickname"><a href="/gpslive/' + distanceSort[i].key + '">' 
+					+ distance[distanceSort[i].key].nickname + '</a></td>'
+					+ '<td class="houi"><img src="' + static_file_site + 'green_arrow/arrow-' + distance[distanceSort[i].key].houi + '.png" height="16" width="16" /> ' 
+						+ direction[distance[distanceSort[i].key].houi] + '</td>'
+					+ '<td class="kyori">' + distance[distanceSort[i].key].kyori + '</td></tr>';
 			}
 			$("#kinsetsu-table").html(tmp);
 			$("#imacocoUsers").html("（全体：" + d.points.length + "人）");
@@ -886,17 +928,185 @@ function update()
 	);
 }
 
-// プロットのON/OFFの切り替え
-function getCheck(obj)
-{
-	var user = users[obj.id.substr(3)];
-	if (user) {
-		user.watch = obj.checked;
-		if (!obj.checked && user.prev_marker) {
-			map.removeOverlay(user.prev_marker);
-			user.prev_marker = null;
-		}
+// 現在地アイコンの作成（CSS Spriteを使う）
+function makeDirectionIcon(td, type) {
+	var ic;
+
+	if (!isNaN(td)) {
+		ic = new google.maps.MarkerImage(
+			'/img/middle_arrow_mini.png',
+			new google.maps.Size(34, 34),
+			new google.maps.Point(parseInt(td) * 34, 0),
+			new google.maps.Point(17, 17)
+		);
+	} else {
+		ic = new google.maps.MarkerImage(
+			'/img/direction_icon.png',
+			new google.maps.Size(32, 32),
+			new google.maps.Point(type * 32, 0),
+			new google.maps.Point(16, 16)
+		);
 	}
+	return ic;
+}
+
+// 現在地アイコンの取得
+function getDirectionIcon(td, type, username) {
+	if (!isNaN(td) && type == 0) {
+		td = Math.round(td / 3);
+		td %= 120;
+		return defaultDirectionIcon[td];
+	} else if (type == 99) {
+		if(twitter_icon){
+			if(users[username].twitter_icon == 'no_twitter_id') {
+				return directionIcon[0];
+			} else if (users[username].twitter_icon) {
+				return users[username].twitter_icon;
+			} else {
+				// アイコンを取得する
+				$.ajax({
+					type : 'GET',
+					url : '/api/getuserinfo',
+					data :
+						{
+							user : username,
+							t : new Date().getTime()
+						},
+					dataType : 'json',
+					async : false,
+					success : function(res){
+						if (res.twitter_image_url) {
+							var ic = new google.maps.MarkerImage(
+								res.twitter_image_url,
+								new google.maps.Size(32, 32),
+								null,
+								new google.maps.Point(16, 16),
+								new google.maps.Size(32, 32)
+							);
+							users[username].twitter_icon = ic;
+						} else {
+							users[username].twitter_icon = 'no_twitter_id';
+						}
+					}
+				});
+
+				if (users[username].twitter_icon && users[username].twitter_icon != 'no_twitter_id') {
+					return users[username].twitter_icon;
+				} else {
+					return directionIcon[0];
+				}
+			}
+		} else{
+			var ic = new google.maps.MarkerImage(
+				'/img/direction_icon.png',
+				new google.maps.Size(32, 32),
+				new google.maps.Point(11 * 32, 0),
+				new google.maps.Point(16, 16)
+			);
+			users[username].twitter_icon = ic;
+			return users[username].twitter_icon;
+		}
+	} else {
+		return directionIcon[type];
+	}
+}
+
+// ストリームマーカーの作成
+function makeStreamMarker(stream, pt) {
+	var origin;
+	if (stream == 'live') {
+		// ustream.tv
+		origin = 0;
+	} else if (stream == 'justin.tv') {
+		// justin.tv
+		origin = 1;
+	} else if (stream.match(/^nicolive/)) {
+		// ニコニコ生放送
+		origin = 2;
+	}
+	ic = new google.maps.MarkerImage(
+		'/img/stream_icon.png',
+		new google.maps.Size(16, 16),
+		new google.maps.Point(16 * origin, 0),
+		new google.maps.Point(-6, -6)
+	);
+
+	var marker = new google.maps.Marker( {
+		clickable : false,
+		icon : ic,
+		position : pt,
+		map : map,
+		zIndex : 2
+	});
+
+	return marker;
+}
+
+// ユーザー情報を初期化
+function initUser(username, flag)
+{
+	if (username)
+	{
+		var nick_icon = new google.maps.MarkerImage(
+			'/user/' + encodeURIComponent(username) + '.png',
+			null,
+			null,
+			new google.maps.Point(0, 24)
+		);
+
+		var plot_path = new google.maps.Polyline({
+			strokeColor: '#FF0000',
+			strokeOpacity: 0.8,
+			strokeWeight: 3
+		});
+
+		var mo = new Object();
+		mo.icon = nick_icon;
+		mo.clickable = false;
+
+		user = new Object();
+		user.lat = 0;
+		user.lon = 0;
+		user.markeropts = markeropts;
+		user.user_markeropts = mo;
+		user.user_marker = new google.maps.Marker(new google.maps.LatLng(0,0), mo);
+		user.linecolor = '#FF0000';
+		user.linewidth = 2;
+		user.transparent = 0.8;
+		user.watch = flag;
+		user.trace = false;
+		user.track = new Array();
+		user.plat = 0;
+		user.plon = 0;
+		user.points = "";
+		user.levels = "";
+		user.level_len = 0;
+		user.last_level = "";
+		user.update = false;
+		user.broadcast = '';
+		users[username] = user;
+		user.plot = new Array();
+		user.nick_icon = nick_icon;
+		user.plot_markers = new Array();
+		user.plot_path = plot_path;
+		user.infowindow = null;
+
+	}
+}
+
+// 地図の大きさを変える
+function setMapSize(w, h)
+{
+	var d = document.getElementById("map");
+	if (d && d.style)
+	{
+		var center = map.getCenter();
+		d.style.width = w;
+		d.style.height = h;
+		map.checkResize();
+		map.panTo(center);
+	}
+	return false;
 }
 
 // 注目するユーザーを設定
@@ -938,6 +1148,296 @@ function setTraceUser(username, magnify)
 		}
 	}
 	traceuser = username;
+}
+
+//-------------------------------------------------------------
+// 移動したかどうかをチェックする(1m以上移動したかどうか)
+/*
+function checkMoving(lat_from, lon_from, lat_to, lon_to)
+{
+	var from = new google.maps.LatLng(lat_from, lon_from);
+	var to = new google.maps.LatLng(lat_to, lon_to);
+	return to.distanceFrom(from) > 1;
+}
+*/
+// 注意：簡易的に緯度経度の変化のみ見ることにする
+function checkMoving(lat_from, lon_from, lat_to, lon_to) {
+	return (lat_from != lat_to || lon_from != lon_to);
+}
+
+// マーカーを消す
+function removeUserMarker(user)
+{
+	if (typeof(user.prev_marker) != 'undefined')
+	{
+		map.removeOverlay(user.prev_marker);
+		user.prev_marker = undefined;
+	}
+	if (user.prev_marker2 != undefined)
+	{
+		map.removeOverlay(user.prev_marker2);
+	}
+	if (user.polyline != undefined)
+	{
+		map.removeOverlay(user.polyline);
+	}
+	while (user.track.length > 0) {
+		var mk = user.track.shift();
+		map.removeOverlay(mk);
+	}
+	if (user.stream_marker)
+	{
+		map.removeOverlay(user.stream_marker);
+		user.stream_marker = undefined;
+	}
+	user.lat = 0;
+	user.lon = 0;
+}
+
+// マーカーイベント
+function createClickableMarker(pt, username) {
+
+	var mk  = new google.maps.Marker( {
+		position : pt,
+		map : map,
+		title : username,
+		zIndex : 1
+	});
+
+	// マーカーをクリックしたときのイベント
+	google.maps.event.addListener(mk, 'click', function() {
+		if(traceuser == username){
+			// 他の情報ウィンドウを閉じておく
+			for (var u in users) {
+				if (users[u].infowindow) {
+					users[u].infowindow.close();
+				}
+			}
+
+			if (!users[username].user_info || users[username].user_info == "") {
+				// ユーザー情報がなければサーバからとってくる
+
+				// 位置情報を取得する
+				$.ajax({
+					type : 'GET',
+					url : '/api/getuserinfo',
+					data :
+						{
+							user : username,
+							t : new Date().getTime()
+						},
+					dataType : 'json',
+					async : false,
+					success : function(res){
+						var txt;
+						if (res.popup) {
+							txt =
+								'<div id="infowindow">%user%%liveinfo%<hr />' +
+								res.popup +
+								'</div>';
+						} else {
+							txt =
+								'<div id="infowindow">%user%%liveinfo%<hr />' +
+								'最終表示時刻 %plottime%<br />%profile%<br />%userweb%<br />%twitter%<br />%ustream%' +
+								'</div>';
+						}
+						users[username].jtv = res.jtv;
+						users[username].ust = res.ust;
+						txt = txt.replace('%profile%', res.url ? '<a target="_blank" href="/home/' + username + '">profile</a>' : '');
+						txt = txt.replace('%userweb%', res.url ? '<a target="_blank" href="' + res.url + '">HomePage</a>' : '');
+						txt = txt.replace('%twitter%', res.twitter ? '<a target="_blank" href="https://twitter.com/' + res.twitter + '">' + res.twitter + ' on Twitter</a>' : '');
+						txt = txt.replace('%ustream%', res.ust ? '<a target="_blank" href="http://www.ustream.tv/channel/' + res.ust + '">' + res.ust + ' on USTREAM</a>' : '');
+						txt = txt.replace('%justin%', res.jtv ? '<a target="_blank" href="http://www.justin.tv/' + res.jtv + '">' + res.jtv + ' on Justin.tv</a>' : '');
+						users[username].user_info = txt;
+					},
+					error : function(json){
+						users[username].user_info = '情報の取得に失敗しました';
+					}
+				});
+			}
+			// 情報ウィンドウを開く
+			users[username].infowindow = new google.maps.InfoWindow({
+				content: updateInformation(username),
+				maxWidth: 250
+			});
+			users[username].infowindow.open(map, users[username].direction_marker);
+		} else {
+			if (prev_trace == '') {
+				prev_trace = traceuser;
+			}
+			setTraceUser(username);
+			map.setZoom(14);
+		}
+	});
+	return mk;
+}
+
+// 情報ウィンドウの更新
+function updateInformation(username) {
+	var txt = users[username].user_info.
+		replace(/%user%/g, username).
+		replace(/%plottime%/g, makeTimeString()).
+		replace(/%latitude%/g, users[username].lat).
+		replace(/%longitude%/g, users[username].lon).
+		replace(/%direction%/g, users[username].td).
+		replace(/%altitude%/g, users[username].altitude).
+		replace(/\\n/g, "<br />").
+		replace(/%hr%/g, "<hr />");
+
+	if (users[username].ustream_status) {
+		var bc = users[username].ustream_status;
+		if (bc == 'live' && users[username].ust) {
+			txt = txt.replace('%liveinfo%', '&nbsp;<a target="_blank" href="http://www.ustream.tv/channel/' + users[username].ust + '"><b>LIVE on USTREAM.tv</b></a>');
+			txt = txt.replace('%nicolive%', '');
+		} else if (bc == 'justin.tv' && users[username].jtv) {
+			txt = txt.replace('%nicolive%', '');
+			txt = txt.replace('%liveinfo%', '&nbsp;<a target="_blank" href="http://www.justin.tv/' + users[username].jtv + '"><b>LIVE on Justin.tv</b></a>');
+		} else if( users[username].ustream_status.match(/^nicolive:(.+)/)) {
+			nicolive = RegExp.$1;
+			txt = txt.replace('%nicolive%', '<a target="_blank" href="http://live.nicovideo.jp/watch/lv' + nicolive + '">ニコニコ生放送中</a>');
+			txt = txt.replace('%liveinfo%', '&nbsp;<a target="_blank" href="http://live.nicovideo.jp/watch/lv' + nicolive + '"><b>ニコニコ生放送中</b></a>');
+		} else {
+			txt = txt.replace('%nicolive%', '');
+			txt = txt.replace('%liveinfo%', '');
+		}
+	} else {
+		txt = txt.replace('%nicolive%', '');
+		txt = txt.replace('%liveinfo%', '');
+	}
+
+	if (users[username].velocity || users[username].velocity == 0) {
+		txt = txt.replace(/%velocity%/g, users[username].velocity);
+	} else {
+		txt = txt.replace(/%velocity%/g, '非公開');
+	}
+
+	return txt;
+}
+
+// 現在時刻文字列作成
+function makeTimeString()
+{
+	var mySysDate = new Date();
+	var myYear = mySysDate.getFullYear();
+	var myMonth = mySysDate.getMonth()+1;
+	var myDate = mySysDate.getDate();
+	var myHour = mySysDate.getHours();
+	var myMin = mySysDate.getMinutes();
+	var mySec = mySysDate.getSeconds();
+	if (myMonth < 10) { myMonth = "0" + myMonth; }
+	if (myDate < 10) { myDate = "0" + myDate; }
+	if (myHour < 10) { myHour = "0" + myHour; }
+	if (myMin < 10) { myMin = "0" + myMin; }
+	if (mySec < 10) { mySec = "0" + mySec; }
+	return myYear + '-' + myMonth + '-' + myDate + ' ' + myHour + ':' + myMin + ':' + mySec;
+}
+
+// グローバル変数が定義済みかどうか
+// objを指定すると、obj.vが定義済みかどうかを判定
+// 指定がない場合はwindow.v(グローバル変数v)が定義済みかどうかを判定
+function isDefined(v, obj)
+{
+	if (obj == undefined) {
+		obj = 'window';
+	}
+	var ret = typeof(eval(obj)[v]) != 'undefined';
+//	alert('variable ' + obj + '.' + v + ' is ' + (ret ? 'defined' : 'undefined'));
+	return ret;
+}
+
+
+
+// メッセージ出力
+function setMessage(mesg)
+{
+	var msg = document.getElementById('msg');
+	if (msg)
+	{
+		msg.innerHTML = mesg;
+	}
+}
+
+
+
+var iconImage = [
+	{ 'path':'/car', 'direction': true, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':10,
+		'path2':'/middle_arrow/arrow-', 'w2':52, 'h2':52, 'ax2':26, 'ay2':26, 'wax2':26, 'way2':20 },
+	{ 'path':'/keitai', 'direction': false, 'ext':'.png', 'w':20, 'h':45, 'ax':10, 'ay':23, 'wax':10, 'way':18 },
+	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/plane', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
+	{ 'path':'/train', 'direction': false, 'ext':'.png', 'w':55, 'h':45, 'ax':28, 'ay':23, 'wax':28, 'way':19 },
+	{ 'path':'/shinkansen', 'direction': false, 'ext':'.png', 'w':44, 'h':42, 'ax':22, 'ay':21, 'wax':22, 'way':17 },
+	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/bus', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
+	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/cycling', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
+	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/hiker', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
+	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/motorcycling', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
+	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/helicopter', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
+	{ 'path':'http://maps.google.co.jp/mapfiles/ms/icons/ferry', 'direction': false, 'ext':'.png', 'w':32, 'h':32, 'ax':16, 'ay':16, 'wax':16, 'way':16 },
+];
+
+
+var defaultDirectionIcon = new Array();
+var directionIcon = new Array();
+
+function createSharedMarker(pt, key, desc)
+{
+	var marker = new google.maps.Marker(pt);
+	google.maps.event.addListener(marker, 'click', function()
+		{
+			updateOff();
+			marker.openInfoWindowHtml('<div><pre>' + desc + '</pre></div><hr><div><button onClick=\"removeSharedMarker(\''+key+'\')\">削除</button></div>');
+		}
+	);
+	google.maps.event.addListener(marker, 'infowindowclose', function()
+		{
+			updateOn();
+		}
+	);
+	return marker;
+}
+
+function removeSharedMarker(key)
+{
+	if (!isDefined('group_name') || group_name == '')
+	{
+		alert('グループ表示モードではありません');
+		return;
+	}
+
+	var req = GXmlHttp.create();
+	req.open("GET", "/user/deletemarker?group=" + encodeURIComponent(group_name) + "&key=" + key , false);
+	req.send("");
+	if (req.status != 200 || req.responseText == "")
+	{
+		alert('サーバでエラーが発生しました');
+		return false;
+	}
+	var res = eval(req.responseText);
+	// 情報ウィンドウ内のHTML
+	if (res && res.result)
+	{
+		map.removeOverlay(share_markers[key].marker);
+		delete share_markers[key];
+		alert('削除しました');
+		return true;
+	}
+	else
+	{
+		alert('サーバでエラーが発生しました:' + res.errmsg);
+		return false;
+	}
+}
+
+// プロットのON/OFFの切り替え
+function getCheck(obj)
+{
+	var user = users[obj.id.substr(3)];
+	if (user) {
+		user.watch = obj.checked;
+		if (!obj.checked && user.prev_marker) {
+			map.removeOverlay(user.prev_marker);
+			user.prev_marker = null;
+		}
+	}
 }
 
 // 描画モードを設定
@@ -1013,57 +1513,6 @@ function loadUserList(watch)
 	return false;
 }
 
-// ユーザー情報を初期化
-function initUser(username, flag)
-{
-	if (username)
-	{
-		var icon = new google.maps.MarkerImage();
-		icon.image = 'http://www.fujita-lab.com/imakoko' + "/user/" + encodeURIComponent(username) + ".png"; // [CHANGE]
-		icon.iconAnchor = new google.maps.Point(0, 24);
-
-		var mo = new Object();
-		mo.icon = icon;
-		mo.clickable = false;
-
-		user = new Object();
-		user.lat = 0;
-		user.lon = 0;
-		user.markeropts = markeropts;
-		user.user_markeropts = mo;
-		user.user_marker = new google.maps.Marker(new google.maps.LatLng(0,0), mo);
-		user.linecolor = '#FF0000';
-		user.linewidth = 2;
-		user.transparent = 0.8;
-		user.watch = flag;
-		user.trace = false;
-		user.track = new Array();
-		user.plat = 0;
-		user.plon = 0;
-		user.points = "";
-		user.levels = "";
-		user.level_len = 0;
-		user.last_level = "";
-		user.update = false;
-		user.broadcast = '';
-		users[username] = user;
-	}
-}
-
-// 地図の大きさを変える
-function setMapSize(w, h)
-{
-	var d = document.getElementById("map");
-	if (d && d.style)
-	{
-		var center = map.getCenter();
-		d.style.width = w;
-		d.style.height = h;
-		map.checkResize();
-		map.panTo(center);
-	}
-	return false;
-}
 
 //----------------------------------------------- get_browser_width
 function get_browser_width()
@@ -1302,303 +1751,6 @@ DateTimeBox.prototype.getDefaultPosition = function()
 }
 */
 
-function initialize()
-{
-
-	if (isDefined('api_view'))
-	{
-		apiview = api_view;
-	}
-
-	if (isDefined('hide_userlist') && hide_userlist) {
-		var ul = document.getElementById('right');
-		if (ul) {
-			ul.style.display = 'none';
-		}
-		var footer = document.getElementById('footer');
-		if (footer) {
-			footer.style.display = 'none';
-		}
-		hidelist = 1;
-	}
-
-	if (isDefined('map_maximize') && map_maximize)
-	{
-		window.onresize = function()
-		{
-			resize();
-		}
-		resize();
-	}
-
-/*
-	if (isDefined('use_osm') && use_osm) {
-		var copyOSM = new GCopyrightCollection("<a href=\"http://www.openstreetmap.org/\">OpenStreetMap</a>");
-		copyOSM.addCopyright(new GCopyright(1, new google.maps.LatLngBounds(new google.maps.LatLng(-90,-180), new google.maps.LatLng(90,180)), 0, " "));
-
-		var tilesMapnik     = new GTileLayer(copyOSM, 1, 17, {tileUrlTemplate: 'http://tile.openstreetmap.org/{Z}/{X}/{Y}.png'});
-		var tilesOsmarender = new GTileLayer(copyOSM, 1, 17, {tileUrlTemplate: 'http://tah.openstreetmap.org/Tiles/tile/{Z}/{X}/{Y}.png'});
-
-		var mapMapnik     = new GMapType([tilesMapnik],     G_NORMAL_MAP.getProjection(), "Mapnik");
-		var mapOsmarender = new GMapType([tilesOsmarender], G_NORMAL_MAP.getProjection(), "Osmarend");
-		myMapTypes.push(mapMapnik);
-		myMapTypes.push(mapOsmarender);
-	}
-	
-	map = new google.maps.Map(document.getElementById('map'), {
-		mapTypeControlOptions: {
-			mapTypeIds: [google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.SATELLITE, map_style]
-		},
-		center : new google.maps.LatLng(35.658634, 139.745411),
-		mapTypeId: map_style,
-		scaleControl : true,
-		streetViewControl : false,
-		zoom : 10
-	});
-*/
-
-	// Google Maps API v3
-	if(map_style){
-		map = new google.maps.Map(document.getElementById('map'), {
-			mapTypeControlOptions: {
-				mapTypeIds: [google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.SATELLITE, map_style]
-			},
-			center : new google.maps.LatLng(35.658634, 139.745411),
-			mapTypeId: map_style,
-			scaleControl : true,
-			streetViewControl : false,
-			zoom : 10
-		});
-		
-	    if(map_style == "OSM"){
-	        var mapTypeIds = [];
-	        for(var type in google.maps.MapTypeId) {
-	            mapTypeIds.push(google.maps.MapTypeId[type]);
-	        }
-	        mapTypeIds.push("OSM");
-	        
-	    	map.mapTypes.set("OSM", new google.maps.ImageMapType({
-	            getTileUrl: function(coord, zoom) {
-	                return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
-	            },
-	            tileSize: new google.maps.Size(256, 256),
-	            name: "OpenStreetMap",
-	            maxZoom: 18
-	        }));
-	    }else{
-		    var styledMapType = new google.maps.StyledMapType(styles[map_style], {name: map_style});
-		    map.mapTypes.set(map_style, styledMapType);
-	    }
-	}else{
-		map = new google.maps.Map(document.getElementById('map'), {
-			center : new google.maps.LatLng(35.658634, 139.745411),
-			mapTypeId : google.maps.MapTypeId.ROADMAP,
-			scaleControl : true,
-			streetViewControl : false,
-			zoom : 10
-		});
-	}
-	
-	map.mapTypes.set("OSM", new google.maps.ImageMapType({
-        getTileUrl: function(coord, zoom) {
-            return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
-        },
-        tileSize: new google.maps.Size(256, 256),
-        name: "OpenStreetMap",
-        maxZoom: 18
-    }));
-
-
-	geocoder = new google.maps.Geocoder()
-
-	if (!isDefined('use_zoom')) {
-		use_zoom = 2;
-	}
-/*
-	if (!isDefined('use_zoom') || use_zoom) {
-		if ($(document.body).innerHeight() > 600) { // [CHANGE]
-			map.addControl(new GLargeMapControl(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(5, 50))); // [CHANGE]
-		} else { // [CHANGE]
-			map.addControl(new GSmallMapControl(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(5, 50))); // [CHANGE]
-		}
-		map.enableContinuousZoom();
-		map.enableDoubleClickZoom();
-		map.enableScrollWheelZoom();
-		google.maps.event.addDomListener(map, "DOMMouseScroll", CancelEvent); // Firefox
-		google.maps.event.addDomListener(map, "mousewheel",     CancelEvent); // IE
-	}
-*/
-/*
-	controlGMapType = new GMapTypeControl(); // [CHANGE]
-	map.addControl(controlGMapType, new ControlPosition(G_ANCHOR_TOP_RIGHT, new google.maps.Size(315, 5))); // [CHANGE]
-	map.addControl(new GScaleControl(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(75, 90))); // [CHANGE]
-*/
-//	new GKeyboardHandler(map); // [ADD]
-
-	// [ADD]
-	if(!movie_enable){
-//		map.removeControl(controlGMapType);
-//		map.addControl(controlGMapType, new ControlPosition(G_ANCHOR_TOP_RIGHT, new google.maps.Size(10, 5)));
-		$("#info").css("right", 10);
-	}
-
-	if (!isDefined('use_minimap') || use_minimap)
-	{
-//		map.addControl(new GOverviewMapControl());
-	}
-
-//	map.addControl(new SignatureBox(), new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(75, 45))); // [CHANGE]
-	// map.addControl(new DateTimeBox()); // [CHANGE]
-
-	// datetimebox = document.getElementById("DateTime"); // [CHANGE]
-
-	// google.maps.event.addListener(map, "click", openMenu);
-	// google.maps.event.addListener(map, "mousedown", updateOff);
-
-	if (isDefined('map_region'))
-	{
-		var min_lat = 91;
-		var min_lon = 181;
-		var max_lat = -91;
-		var max_lon = -181;
-
-		for (var idx in map_region)
-		{
-			if (map_region[idx].lat < min_lat) { min_lat = map_region[idx].lat; }
-			if (max_lat < map_region[idx].lat) { max_lat = map_region[idx].lat; }
-			if (map_region[idx].lon < min_lon) { min_lon = map_region[idx].lon; }
-			if (max_lon < map_region[idx].lon) { max_lon = map_region[idx].lon; }
-		}
-		var avg_lat = (min_lat + max_lat) / 2;
-		var avg_lon = (min_lon + max_lon) / 2;
-		var ct = new google.maps.LatLng(avg_lat, avg_lon);
-		// 全体が表示できる矩形座標を計算
-		var region = new google.maps.LatLngBounds(new google.maps.LatLng(min_lat, min_lon), new google.maps.LatLng(max_lat, max_lon));
-		// 全体が表示できるように位置とズームを設定
-		map.setCenter(ct, map.getBoundsZoomLevel(region));
-		center = ct;
-	}
-	else
-	{
-		var point = new google.maps.LatLng(35.658634, 139.745411); // 初期位置は東京タワー
-		map.setCenter(point, 14);
-		center = point;
-	}
-
-	if (isDefined('use_rmenu') && use_rmenu)
-	{
-		rmenu = document.createElement("div");
-		var MapPX = map.getSize();
-
-		//右クリックメニューのスタイルを設定。
-		rmenu.style.visibility = "hidden";
-		rmenu.style.backgroundColor = "white";
-		rmenu.style.border = "2px solid black";
-		rmenu.style.padding = "2px";
-		rmenu.style.fontSize = "12px";
-		rmenu.style.cursor = "pointer";
-
-		//右クリックメニューの内容(HTML）
-		rmenu.innerHTML = "<div onclick='putMarker()'>この場所を共有する</div><hr>"
-		                + "<div onclick='openSearchWindow()'>Googleマップで検索</div>";
-
-		//右クリックメニューをmap内に返す
-		map.getContainer().appendChild(rmenu);
-
-		//右クリック位置を取得してメニューを表示するイベント。pointはgoogle.maps.Size(x,y)で返される。
-		google.maps.event.addListener(map, "singlerightclick", function(point) {
-			updateOff();
-			var rmenux = point.x;
-			var rmenuy = point.y;
-			var latlng = map.fromContainerPixelToLatLng(point)
-			rmenu_lat = latlng.lat();
-			rmenu_lon = latlng.lng();
-
-			//MapPX.width、MapPX.heightの後の74・86はメニュー全体の横幅・縦幅。
-			if(rmenux > (MapPX.width - 74)) { rmenux = MapPX.width - 74; }
-			if(rmenuy > (MapPX.height - 86)) { rmenuy = MapPX.height - 86; }
-			var rmenu_pos = new ControlPosition(G_ANCHOR_TOP_LEFT, new google.maps.Size(rmenux, rmenuy));
-			rmenu_pos.apply(rmenu);
-			rmenu.style.visibility = "visible";
-		});
-
-		//地図上を左クリックしたらメニューが消える。
-		google.maps.event.addListener(map, "click", function()
-			{
-				if (rmenu.style.visibility == "visible"){
-					rmenu.style.visibility = "hidden";
-				}
-				if (!map.infoWindowEnabled())
-				{
-					updateOn();
-				}
-			}
-		);
-	}
-
-	var icon = new google.maps.MarkerImage();
-	icon.image = static_file_site + "aka.png";
-	icon.iconSize = new google.maps.Size(4, 4);
-	icon.iconAnchor = new google.maps.Point(0, 0);
-
-	// 標準マーカーの作成
-	for (var i=0; i<360; i++)
-	{
-		defaultDirectionIcon[i] = makeDirectionIcon(i, 0);
-	}
-	for (var i=0; i<iconImage.length; i++)
-	{
-		directionIcon[i] = makeDirectionIcon(NaN, i);
-	}
-
-	markeropts = new Object();
-	markeropts.icon = icon;
-	markeropts.clickable = false;
-
-	if (isDefined('plot_mode'))
-	{
-		plotmode = plot_mode;
-	}
-
-	if (isDefined('plot_count'))
-	{
-		plotcount = plot_count;
-	}
-
-	if (isDefined('from_top'))
-	{
-		fromtop = from_top;
-	}
-
-	users = new Object();
-	if (hidelist)
-	{
-		if (isDefined('user_list') && user_list[0] == 'all')
-		{
-			setTraceUser('all');
-		}
-	}
-	else
-	{
-		if (!isDefined('user_list'))
-		{
-		//	loadUserList(false);
-		}
-		else if (user_list[0] == 'all')
-		{
-		//	loadUserList(true);
-			setTraceUser('all');
-		}
-		else
-		{
-			for (var u in user_list)
-			{
-				initUser(user_list[u], true);
-			}
-		}
-	}
-	setTimeout(load_next, 10);
-}
 
 function load_next()
 {
@@ -1621,13 +1773,11 @@ if (typeof use_onload != 'undefined' && use_onload) {
 	window.onload = initialize;
 }
 
-
 /*
  * ====================================================================================================
  * GPS Live Tracking : Shintaro Inagaki (2008/07/24)
  * ====================================================================================================
  */
-
 
 	var reloadId;
 	var twitterReloadTime = 60 * 1000;
@@ -1667,7 +1817,7 @@ if (typeof use_onload != 'undefined' && use_onload) {
 			}
 		}
 	);
-
+/*
 	$("#loadDocomo").click(
 		function() {
 			if (!docomoMap) {
@@ -1709,7 +1859,7 @@ if (typeof use_onload != 'undefined' && use_onload) {
 			}
 		}
 	);
-
+*/
 	$("#changeMoviePlayerUst").click(
 		function() {
 			$("#justin").hide("fast", function () {
@@ -1810,7 +1960,7 @@ if (typeof use_onload != 'undefined' && use_onload) {
 	$("#chatSize span.chatSize:eq(1)").css("background-color", "yellow");
 
 	// Twitter
-	reloadId = setTimeout(twitterUpdate, 0);
+//	reloadId = setTimeout(twitterUpdate, 0);
 
 	function twitterUpdate() {
 		// Twitter読み込み

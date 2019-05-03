@@ -315,15 +315,36 @@ app.get('/replay/nickname/*', function(req, res){
 });
 
 
-// todo: GPS Live Tracking をv3に移植する
+// GPS Live Tracking v3
 app.get('/gpslive', function(req, res){
     util.setConsolelog(req);
 
-    res.render('gpslive',
-               {service_name : config.service_name}
-              );
+    var user = '';
+    var args = '';
+    
+    if (req.query.trace != undefined)
+    {
+        user = req.query.trace;
+    }else{
+        user = 'all';
+    }
+
+    res.redirect(HttpStatus.MOVED_PERMANENTLY, '/gpslive/' + user + args);
 });
 
+app.get('/gpslive/*', function(req, res){
+    util.setConsolelog(req);
+
+    var userid = req.url.split('/')[2].split('?')[0];
+
+    res.render('gpslive',
+               {service_name : config.service_name,
+                api_key      : config.googlemap_api_key,
+                map_style    : req.query.mapstyle,
+                trace_user   : userid || 'all'//req.query.trace
+               }
+              );
+});
 
 //全体地図を表示
 app.get('/static/view.html', function(req, res){
@@ -821,7 +842,12 @@ app.get('/api/latest', function(req, res){
         case undefined:
         case 'all':
             res.set('Content-Type', 'text/javascript; charset=utf-8');
-            res.send('(' + JSON.stringify(global.latest) + ')'); 
+
+            if (!req.query.escape){
+                res.send('(' + JSON.stringify(global.latest) + ')'); 
+            }else{
+                res.send(JSON.stringify(global.latest)); 
+            }
             break;
         default:
             var temp = req.query.user.split(',');
@@ -836,7 +862,12 @@ app.get('/api/latest', function(req, res){
             resp.point = tmp;
 
             res.set('Content-Type', 'text/javascript; charset=utf-8');
-            res.send('(' + JSON.stringify(resp) + ')'); 
+            
+            if (!req.query.escape){
+                res.send('(' + JSON.stringify(resp) + ')'); 
+            }else{
+                res.send(JSON.stringify(resp)); 
+            }
     }
     return;
 });
