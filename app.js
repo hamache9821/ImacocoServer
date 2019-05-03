@@ -54,9 +54,9 @@ const util = require('./lib/common-utils.js')
 //グローバル変数
 global.latest = {};
 global.user_list = {};
-global.nickname = lru_cache({max : config.nickname_cache_size, maxAge : config.nickname_cache_ttl * 1000});
-global.replay_latest = lru_cache({max : config.replay_cache_size, maxAge : config.replay_cache_ttl * 1000});
-global.replay_nickname = lru_cache({max : config.replay_cache_size, maxAge : config.replay_cache_ttl * 1000});
+global.nickname = new lru_cache({max : config.nickname_cache_size, maxAge : config.nickname_cache_ttl * 1000});
+global.replay_latest = new lru_cache({max : config.replay_cache_size, maxAge : config.replay_cache_ttl * 1000});
+global.replay_nickname = new lru_cache({max : config.replay_cache_size, maxAge : config.replay_cache_ttl * 1000});
 
 //Express関係
 app.disable('x-powered-by');
@@ -1366,13 +1366,13 @@ function getLatest(){
 function getUserList(){
     setInterval(function(){
         //直近5分以内にデータ送信のあったユーザをアクティブとする
-        db.LocInfo.aggregate(
+        db.LocInfo.aggregate([
             {$match : {time : {"$gte" : util.addMinutes(new Date, -5)}}},
             {$group : {_id  : {valid : "$valid",
                                user  : "$user"
                               }
                       }
-            },
+            }],
             function (err, result){
                 var list = [];
 
