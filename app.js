@@ -773,8 +773,10 @@ app.post('/api/post', passport.authenticate('basic', { session: false }), functi
     locinfo.flag           = '1';
     locinfo.saved          = req.body.save;     //jsonの互換性のために残してるだけ
     locinfo.ustream_status = 'offline';         //jsonの互換性のために残してるだけ
-    locinfo.allow_replay   = '1';         
+    locinfo.allow_replay   = (req.body.allow_replay || '1');
+    locinfo.private_mode   = (req.body.private_mode || '0');
     locinfo.location = [parseFloat(req.body.lon), parseFloat(req.body.lat)];
+//    locinfo.relay_service  = url;
 
     locinfo.save(function(err){
         if(err){
@@ -1158,8 +1160,8 @@ app.get('/api/replay/latest/*', function(req, res){
             //オンラインユーザの直近の位置を取得
             for (var i = 0; i < result.length; i++) {
                 db.LocInfo.find(
-                    {user : result[i], time : { "$gte" : d1, "$lte" : d2}},
-                    {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
+                    {user : result[i], time : { "$gte" : d1, "$lte" : d2}, allow_replay: '1'},
+                    {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0, allow_replay : 0, private_mode : 0},
 
                     function(err, results){
                         points.push(results[0]);
@@ -1336,7 +1338,7 @@ function getLatest(){
                 for (var i = 0; i < result.length; i++) {
                     db.LocInfo.find(
                         {user : result[i], time:{"$gte" : util.addMinutes(new Date, -5)}},
-                        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0},
+                        {_id : 0, __v : 0, time : 0, flag : 0, saved : 0,location : 0, relay_service : 0, allow_replay : 0},
 
                         function(err, results){
                             points.push(results[0]);
@@ -1498,7 +1500,16 @@ function getRelayData(){
                     }
                     
                     try{
-                        var latest = JSON.parse(body.slice(1,body.length -1));
+                        var latest = '';
+                        if(!body.indexOf('('))
+                        {
+                            latest = JSON.parse(body.slice(1,body.length -1));
+                        }
+                        else
+                        {
+                            latest = JSON.parse(body);
+                        }
+
                         var points = latest.points;
 
                         //位置情報保存
@@ -1519,7 +1530,8 @@ function getRelayData(){
                             locinfo.ustream_status = 'offline';
                             locinfo.relay_service  = url;
                             locinfo.location = [parseFloat(points[x].lon), parseFloat(points[x].lat)];
-                            locinfo.allow_replay   = '1';
+                            locinfo.allow_replay   = (points[x].allow_replay || '1');
+                            locinfo.private_mode   = (points[x].private || '0');
 
                             locinfo.save(function(err){
                                 if(err){
@@ -1528,7 +1540,7 @@ function getRelayData(){
                             });
                         }
                     } catch(e){
-                        console.log('error!!');
+                        console.log('error!! getRelayData');
                     }
                 });
             }).on('error', function(e){

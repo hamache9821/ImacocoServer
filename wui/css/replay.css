@@ -62,10 +62,10 @@ a:hover {
 	position: absolute;
 	width: 155px;
 	height: 14px;
-	top: 10px;
-	left: 80px;
+	top: 90px;
+	left: 20px;
 	-moz-opacity: 0.90;
-	filter: alpha(opacity =               90);
+	filter: alpha(opacity = 90);
 	opacity: 0.90;
 	clear: both;
 }
@@ -95,15 +95,15 @@ a:hover {
 	position: absolute;
 	width: 155px;
 	height: 60px;
-	top: 27px;
-	left: 80px;
+	top: 107px;
+	left: 20px;
 	background: #111;
 	padding: 5px 0;
 	font-weight: bold;
 	font-family: serif;
 	color: white;
 	-moz-opacity: 0.90;
-	filter: alpha(opacity =               90);
+	filter: alpha(opacity = 90);
 	opacity: 0.90;
 	text-align: center;
 }
@@ -130,10 +130,10 @@ a:hover {
 	position: absolute;
 	width: 155px;
 	height: 14px;
-	top: 100px;
-	left: 80px;
+	top: 180px;
+	left: 20px;
 	-moz-opacity: 0.90;
-	filter: alpha(opacity =               90);
+	filter: alpha(opacity = 90);
 	opacity: 0.90;
 	clear: both;
 }

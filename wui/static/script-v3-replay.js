@@ -28,7 +28,15 @@ var nodata_count = 0;
 
 var mapOptions = {
 	center : new  google.maps.LatLng(35.658634, 139.745411),
-	mapTypeId : google.maps.MapTypeId.ROADMAP,
+    mapTypeControlOptions: {
+        mapTypeIds: [
+         google.maps.MapTypeId.ROADMAP
+        ,google.maps.MapTypeId.SATELLITE
+        ,google.maps.MapTypeId.TERRAIN
+        ,google.maps.MapTypeId.HYBRID
+    ]
+    },
+    mapTypeId : google.maps.MapTypeId.ROADMAP,
 	streetViewControl : false,
 	zoom : 10
 }

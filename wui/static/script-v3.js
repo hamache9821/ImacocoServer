@@ -54,161 +54,343 @@ var defaultDirectionIcon = new Array();
 var directionIcon = new Array();
 var mapLoadedFlag = false;
 
+var new_styles = {
+		'night': [
+		  {
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#242f3e"
+			  }
+			]
+		  },
+		  {
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#746855"
+			  }
+			]
+		  },
+		  {
+			"elementType": "labels.text.stroke",
+			"stylers": [
+			  {
+				"color": "#242f3e"
+			  }
+			]
+		  },
+		  {
+			"featureType": "administrative.locality",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#d59563"
+			  }
+			]
+		  },
+		  {
+			"featureType": "poi",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#d59563"
+			  }
+			]
+		  },
+		  {
+			"featureType": "poi.park",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#263c3f"
+			  }
+			]
+		  },
+		  {
+			"featureType": "poi.park",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#6b9a76"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#38414e"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road",
+			"elementType": "geometry.stroke",
+			"stylers": [
+			  {
+				"color": "#212a37"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#9ca5b3"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road.highway",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#746855"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road.highway",
+			"elementType": "geometry.stroke",
+			"stylers": [
+			  {
+				"color": "#1f2835"
+			  }
+			]
+		  },
+		  {
+			"featureType": "road.highway",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#f3d19c"
+			  }
+			]
+		  },
+		  {
+			"featureType": "transit",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#2f3948"
+			  }
+			]
+		  },
+		  {
+			"featureType": "transit.station",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#d59563"
+			  }
+			]
+		  },
+		  {
+			"featureType": "water",
+			"elementType": "geometry",
+			"stylers": [
+			  {
+				"color": "#17263c"
+			  }
+			]
+		  },
+		  {
+			"featureType": "water",
+			"elementType": "labels.text.fill",
+			"stylers": [
+			  {
+				"color": "#515c6d"
+			  }
+			]
+		  },
+		  {
+			"featureType": "water",
+			"elementType": "labels.text.stroke",
+			"stylers": [
+			  {
+				"color": "#17263c"
+			  }
+			]
+		  }
+		]
+};
+
 var styles = {
-        'Red': [
-          {
-            featureType: 'all',
-            stylers: [{hue: '#ff0000'}]
-          }
-        ],
-        'Countries': [
-          {
-            featureType: 'all',
-            stylers: [
-              {visibility: 'off'}
-            ]
-          },
-          {
-            featureType: 'water',
-            stylers: [
-              {visibility: 'on'},
-              {lightness: -100 }
-            ]
-          }
-        ],
-        'Night': [
-          {
-            featureType: 'all',
-            stylers: [{invert_lightness: 'true'}]
-          }        
-        ],
-        'Blue': [
-          {
-            featureType: 'all',
-            stylers: [
-              {hue: '#0000b0'},
-              {invert_lightness: 'true'},
-              {saturation: -30}
-            ]
-          }
-        ],
-        'Greyscale': [
-          {              
-            featureType: 'all',
-            stylers: [
-              {saturation: -100},
-              {gamma: 0.50}
-            ]
-          }
-        ],
-        'No roads': [
-          {
-            featureType: 'road',
-            stylers: [
-              {visibility: 'off'}
-            ]
-          }
-        ],
-        'Mixed': [
-          {
-            featureType: 'landscape',
-            stylers: [{hue: '#00dd00'}]
-          }, {
-            featureType: 'road',
-            stylers: [{hue: '#dd0000'}]
-          }, {
-            featureType: 'water',
-            stylers: [{hue: '#000040'}]
-          }, {
-            featureType: 'poi.park',
-            stylers: [{visibility: 'off'}]
-          }, {
-            featureType: 'road.arterial',
-            stylers: [{hue: '#ffff00'}]
-          }, {
-            featureType: 'road.local',
-            stylers: [{visibility: 'off'}]
-          }            
-        ],
-        'Chilled': [
-          {
-            featureType: 'road',
-            elementType: 'geometry',
-            stylers: [{'visibility': 'simplified'}]
-          }, {
-            featureType: 'road.arterial',
-            stylers: [
-             {hue: 149},
-             {saturation: -78},
-             {lightness: 0}
-            ]
-          }, {
-            featureType: 'road.highway',
-            stylers: [
-              {hue: -31},
-              {saturation: -40},
-              {lightness: 2.8}
-            ]
-          }, {
-            featureType: 'poi',
-            elementType: 'label',
-            stylers: [{'visibility': 'off'}]
-          }, {
-            featureType: 'landscape',
-            stylers: [
-              {hue: 163},
-              {saturation: -26},
-              {lightness: -1.1}
-            ]
-          }, {
-            featureType: 'transit',
-            stylers: [{'visibility': 'off'}]
-          }, {
-            featureType: 'water',
-              stylers: [
-              {hue: 3},
-              {saturation: -24.24},
-              {lightness: -38.57}
-            ]
-          }
-        ]
-      };
+		'Red': [
+		  {
+			featureType: 'all',
+			stylers: [{hue: '#ff0000'}]
+		  }
+		],
+		'Countries': [
+		  {
+			featureType: 'all',
+			stylers: [
+			  {visibility: 'off'}
+			]
+		  },
+		  {
+			featureType: 'water',
+			stylers: [
+			  {visibility: 'on'},
+			  {lightness: -100 }
+			]
+		  }
+		],
+		'Night': [
+		  {
+			featureType: 'all',
+			stylers: [{invert_lightness: 'true'}]
+		  }		
+		],
+		'Blue': [
+		  {
+			featureType: 'all',
+			stylers: [
+			  {hue: '#0000b0'},
+			  {invert_lightness: 'true'},
+			  {saturation: -30}
+			]
+		  }
+		],
+		'Greyscale': [
+		  {			  
+			featureType: 'all',
+			stylers: [
+			  {saturation: -100},
+			  {gamma: 0.50}
+			]
+		  }
+		],
+		'No roads': [
+		  {
+			featureType: 'road',
+			stylers: [
+			  {visibility: 'off'}
+			]
+		  }
+		],
+		'Mixed': [
+		  {
+			featureType: 'landscape',
+			stylers: [{hue: '#00dd00'}]
+		  }, {
+			featureType: 'road',
+			stylers: [{hue: '#dd0000'}]
+		  }, {
+			featureType: 'water',
+			stylers: [{hue: '#000040'}]
+		  }, {
+			featureType: 'poi.park',
+			stylers: [{visibility: 'off'}]
+		  }, {
+			featureType: 'road.arterial',
+			stylers: [{hue: '#ffff00'}]
+		  }, {
+			featureType: 'road.local',
+			stylers: [{visibility: 'off'}]
+		  }			
+		],
+		'Chilled': [
+		  {
+			featureType: 'road',
+			elementType: 'geometry',
+			stylers: [{'visibility': 'simplified'}]
+		  }, {
+			featureType: 'road.arterial',
+			stylers: [
+			 {hue: 149},
+			 {saturation: -78},
+			 {lightness: 0}
+			]
+		  }, {
+			featureType: 'road.highway',
+			stylers: [
+			  {hue: -31},
+			  {saturation: -40},
+			  {lightness: 2.8}
+			]
+		  }, {
+			featureType: 'poi',
+			elementType: 'label',
+			stylers: [{'visibility': 'off'}]
+		  }, {
+			featureType: 'landscape',
+			stylers: [
+			  {hue: 163},
+			  {saturation: -26},
+			  {lightness: -1.1}
+			]
+		  }, {
+			featureType: 'transit',
+			stylers: [{'visibility': 'off'}]
+		  }, {
+			featureType: 'water',
+			  stylers: [
+			  {hue: 3},
+			  {saturation: -24.24},
+			  {lightness: -38.57}
+			]
+		  }
+		]
+	  };
 
 // 初期化処理
 function initialize() {
 
 	// Google Maps API v3
 	if(map_style){
-		map = new google.maps.Map(document.getElementById('map'), {
-			mapTypeControlOptions: {
-				mapTypeIds: [google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.SATELLITE, map_style]
-			},
-			center : new google.maps.LatLng(35.658634, 139.745411),
-			mapTypeId: map_style,
-			scaleControl : true,
-			streetViewControl : false,
-			zoom : 10
-		});
-		
-	    if(map_style == "OSM"){
-	        var mapTypeIds = [];
-	        for(var type in google.maps.MapTypeId) {
-	            mapTypeIds.push(google.maps.MapTypeId[type]);
-	        }
-	        mapTypeIds.push("OSM");
-	        
-	    	map.mapTypes.set("OSM", new google.maps.ImageMapType({
-	            getTileUrl: function(coord, zoom) {
-	                return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
-	            },
-	            tileSize: new google.maps.Size(256, 256),
-	            name: "OpenStreetMap",
-	            maxZoom: 18
-	        }));
-	    }else{
-		    var styledMapType = new google.maps.StyledMapType(styles[map_style], {name: map_style});
-		    map.mapTypes.set(map_style, styledMapType);
-	    }
+		if (new_styles[map_style]){
+			map = new google.maps.Map(document.getElementById('map'), {
+				mapTypeControlOptions: {
+					mapTypeIds: [google.maps.MapTypeId.ROADMAP
+					, google.maps.MapTypeId.SATELLITE
+					, map_style]
+				},
+				center : new google.maps.LatLng(35.658634, 139.745411),
+				mapTypeId: map_style,
+				scaleControl : true,
+				streetViewControl : false,
+				zoom : 10
+			});
+
+		}else{
+			map = new google.maps.Map(document.getElementById('map'), {
+				mapTypeControlOptions: {
+					mapTypeIds: [google.maps.MapTypeId.ROADMAP
+					, google.maps.MapTypeId.SATELLITE
+					, map_style]
+				},
+				center : new google.maps.LatLng(35.658634, 139.745411),
+				mapTypeId: map_style,
+				scaleControl : true,
+				streetViewControl : false,
+				zoom : 10
+			});
+		}
+
+		if(map_style == "OSM"){
+			var mapTypeIds = [];
+			for(var type in google.maps.MapTypeId) {
+				mapTypeIds.push(google.maps.MapTypeId[type]);
+			}
+			mapTypeIds.push("OSM");
+			
+			map.mapTypes.set("OSM", new google.maps.ImageMapType({
+				getTileUrl: function(coord, zoom) {
+					return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
+				},
+				tileSize: new google.maps.Size(256, 256),
+				name: "OpenStreetMap",
+				maxZoom: 18
+			}));
+		}else{
+			var styledMapType = new google.maps.StyledMapType(new_styles[map_style], {name: map_style});
+			map.mapTypes.set(map_style, styledMapType);
+		}
 	}else{
 		map = new google.maps.Map(document.getElementById('map'), {
 			center : new google.maps.LatLng(35.658634, 139.745411),
@@ -217,16 +399,17 @@ function initialize() {
 			streetViewControl : false,
 			zoom : 10
 		});
+
 	}
 	
 	map.mapTypes.set("OSM", new google.maps.ImageMapType({
-        getTileUrl: function(coord, zoom) {
-            return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
-        },
-        tileSize: new google.maps.Size(256, 256),
-        name: "OpenStreetMap",
-        maxZoom: 18
-    }));
+		getTileUrl: function(coord, zoom) {
+			return "http://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
+		},
+		tileSize: new google.maps.Size(256, 256),
+		name: "OpenStreetMap",
+		maxZoom: 18
+	}));
 
 	// 地図表示範囲の設定
 	if (isDefined('map_region')) {
@@ -330,8 +513,8 @@ function update() {
 			t : new Date().getTime()
 		},
 		function(json){
-            updateMap(json);
-        }
+			updateMap(json);
+		}
 	);
 }
 
@@ -400,10 +583,10 @@ function updateMap(json, trace) {
 
 			// 地図の描画範囲外のアイコンは削除する
 			if (traceuser != 'all' && traceuser != username && !viewArea.contains(pt)) {
-                if (!trace){
-    				removeUserMarker(user);
-    				continue;
-                }
+				if (!trace){
+					removeUserMarker(user);
+					continue;
+				}
 			}
 
 			// 表示するユーザーのみプロットする
@@ -597,7 +780,7 @@ function getDirectionIcon(td, type, username) {
 						}
 					}
 				});
-	
+
 				if (users[username].twitter_icon && users[username].twitter_icon != 'no_twitter_id') {
 					return users[username].twitter_icon;
 				} else {
@@ -788,7 +971,7 @@ function createClickableMarker(pt, username) {
 						users[username].ust = res.ust;
 						txt = txt.replace('%profile%', res.url ? '<a target="_blank" href="/home/' + username + '">profile</a>' : '');
 						txt = txt.replace('%userweb%', res.url ? '<a target="_blank" href="' + res.url + '">HomePage</a>' : '');
-						txt = txt.replace('%twitter%', res.twitter ? '<a target="_blank" href="http://twitter.com/' + res.twitter + '">' + res.twitter + ' on Twitter</a>' : '');
+						txt = txt.replace('%twitter%', res.twitter ? '<a target="_blank" href="https://twitter.com/' + res.twitter + '">' + res.twitter + ' on Twitter</a>' : '');
 						txt = txt.replace('%ustream%', res.ust ? '<a target="_blank" href="http://www.ustream.tv/channel/' + res.ust + '">' + res.ust + ' on USTREAM</a>' : '');
 						txt = txt.replace('%justin%', res.jtv ? '<a target="_blank" href="http://www.justin.tv/' + res.jtv + '">' + res.jtv + ' on Justin.tv</a>' : '');
 						users[username].user_info = txt;
@@ -800,9 +983,9 @@ function createClickableMarker(pt, username) {
 			}
 			// 情報ウィンドウを開く
 			users[username].infowindow = new google.maps.InfoWindow({
-		        content: updateInformation(username),
-		        maxWidth: 250
-		    });
+				content: updateInformation(username),
+				maxWidth: 250
+			});
 			users[username].infowindow.open(map, users[username].direction_marker);
 		} else {
 			if (prev_trace == '') {
