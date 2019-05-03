@@ -39,18 +39,20 @@
                     <td><input id="twitter" value="<%= twitter %>" size="20" /></td>
                 </tr>
                 <tr>
-                    <th>USTREAM.tv channel<br>http://www.ustream.tv/channel/の後の部分です<br>
-                        USTREAM.tvのLIVEアイコン(<img src="/img/ustream.png">)を出したい人は登録してください</th>
-                    <td><input id="ust" value="<%= ust %>" size="20" /></td>
+                    <th><s>USTREAM.tv channel<br>http://www.ustream.tv/channel/の後の部分です<br>
+                        USTREAM.tvのLIVEアイコン(<img src="/img/ustream.png">)を出したい人は登録してください</s></th>
+                    <td><input id="ust" value="<%= ust %>" size="20" disabled="disabled" /></td>
                 </tr>
                 <tr>
-                    <th>Justin.tv channel<br>http://www.justin.tv/の後の部分です<br>
-                        Justin.tvのLIVEアイコン(<img src="/img/justin.png">)を出したい人は登録してください</th>
-                    <td><input id="jtv" value="<%= jtv %>" size="20" /></td>
+                    <th><s>Justin.tv channel<br>http://www.justin.tv/の後の部分です<br>
+                        Justin.tvのLIVEアイコン(<img src="/img/justin.png">)を出したい人は登録してください</s></th>
+                    <td><input id="jtv" value="<%= jtv %>" size="20" disabled="disabled" /></td>
                 </tr>
                 <tr>
-                    <th>ニコニコ動画ID<br>ニコニコ動画の<a href="http://www.nicovideo.jp/my/" target="_blank">マイページ</a>に表示されているIDの数字です。<br/><font color="red">コミュニティ番号(<b>co</b>xxxxx)ではありません！</font><br>ニコニコ生放送のLIVEアイコン(<img src="/img/nicolive.png">)を出したい人は登録してください</th>
-                    <td><input id="nicolive" value="<%= nicolive %>" size="20" /></td>
+                    <th><s>ニコニコ動画ID<br>ニコニコ動画の<a href="http://www.nicovideo.jp/my/" target="_blank">マイページ</a>に表示されているIDの数字です。<br/>
+                    <font color="red">コミュニティ番号(<b>co</b>xxxxx)ではありません！</font>
+                    <br>ニコニコ生放送のLIVEアイコン(<img src="/img/nicolive.png">)を出したい人は登録してください</s></th>
+                    <td><input id="nicolive" value="<%= nicolive %>" size="20" disabled="disabled" /></td>
                 </tr>
                 <tr>
                     <th><a href="https://locapos.com?zoom=7" target="_blank">ろけぽす</a>連携<br>
@@ -64,10 +66,10 @@
                     <th>自己紹介</th><td><textarea id="description" rows="5" cols="40"><%= description %></textarea></td>
                 </tr>
                 <tr>
-                    <td colspan="2"><input type="checkbox" id="show" checked="<%= show %>" /><a href="/static/view.html">全体地図ページ</a>で公開する(APIでは常に公開です)</td>
+                    <td colspan="2"><input type="checkbox" id="show" <%= show?"checked":"" %> /><a href="/static/view.html">全体地図ページ</a>で公開する(APIでは常に公開です)</td>
                 </tr>
                 <tr>
-                    <td colspan="2"><input type="checkbox" id="speed" checked="<%= speed %>"/>APIで速度を公開する</td>
+                    <td colspan="2"><input type="checkbox" id="speed" <%= speed?"checked":"" %> />APIで速度を公開する</td>
                 </tr>
                 <tr>
                     <th>地図のふきだし</th>
